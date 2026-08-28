@@ -1,0 +1,52 @@
+app_name: energy-intelligence-platform
+
+services:
+  - name: api
+    type: web
+
+    # Build from the Dockerfile at repo root
+    git:
+      repository: github.com/utsavanand30/energy-intelligence-platform
+      branch: main
+
+    docker:
+      dockerfile: Dockerfile
+      target: backend        # build only the final stage
+
+    # Koyeb injects PORT; uvicorn must bind to it
+    ports:
+      - port: 8000
+        protocol: http
+
+    routes:
+      - path: /
+        port: 8000
+
+    # Koyeb healthcheck
+    health_checks:
+      - grace_period: 60      # give the seed script time to run
+        interval: 30
+        restart_limit: 3
+        timeout: 10
+        http:
+          path: /health
+          port: 8000
+
+    # Environment variables — set DATABASE_URL in the Koyeb dashboard
+    # after creating a Neon PostgreSQL database.
+    env:
+      - key: SERVE_FRONTEND
+        value: "true"
+      - key: SIMULATION_MODE
+        value: realtime
+      - key: SCAN_INTERVAL_SECONDS
+        value: "30"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      # DATABASE_URL and SECRET_KEY are injected via the Koyeb dashboard
+      # so they never appear in source control.
+
+    # Koyeb free instance: nano (0.1 vCPU, 256 MB RAM)
+    # Enough for the simulation + FastAPI + static serving
+    instance_types:
+      - type: nano

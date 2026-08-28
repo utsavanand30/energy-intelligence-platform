@@ -1,28 +1,26 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Stage 1: Build React frontend
+# Stage 1 — Build React frontend
 # ─────────────────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS frontend-builder
 
 WORKDIR /build/frontend
 
-# Copy package files first for better layer caching
+# Install deps first (better layer cache)
 COPY frontend/package.json frontend/package-lock.json* ./
-
-# Install all dependencies (including devDependencies needed for the build)
 RUN npm ci --legacy-peer-deps
 
-# Copy the rest of the frontend source
+# Build production bundle → /build/frontend/dist
 COPY frontend/ ./
-
-# Build production bundle — output goes to /build/frontend/dist
 RUN npm run build
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Stage 2: Python backend + copied frontend dist
+# Stage 2 — Python backend  +  built frontend static files
 # ─────────────────────────────────────────────────────────────────────────────
 FROM python:3.11-slim AS backend
 
-# System deps for psycopg2 (libpq) and general build tools
+# libpq-dev  → psycopg2 SSL support (needed for Neon.tech)
+# gcc        → some numpy/pandas C extensions
+# curl       → healthcheck probing
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libpq-dev \
         gcc \
@@ -31,28 +29,30 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Install Python dependencies
+# Python dependencies
 COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir --upgrade pip \
  && pip install --no-cache-dir -r requirements.txt
 
-# Copy backend application code
+# Application code
 COPY backend/ ./
 
-# Copy startup script (must be after COPY backend/ so it lands in /app)
+# Startup script (sits at repo root)
 COPY start.sh ./start.sh
+RUN chmod +x ./start.sh
 
-# Copy built frontend from stage 1 into the location main.py expects:
-#   /app/frontend/dist
+# Built React app → /app/frontend/dist  (path main.py expects)
 COPY --from=frontend-builder /build/frontend/dist ./frontend/dist
 
-# Create non-root user for security
-RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
-RUN chown -R appuser:appgroup /app
+# Non-root user
+RUN addgroup --system appgroup \
+ && adduser  --system --ingroup appgroup appuser \
+ && chown -R appuser:appgroup /app
 USER appuser
 
-# Expose the port Render maps to
+# PORT is injected by Koyeb/Render at runtime; default to 8000 locally
+ENV PORT=8000
 EXPOSE 8000
 
-# Startup: seed master data + historical data if fresh, then start server
+# start.sh: seeds DB if empty, then starts uvicorn on $PORT
 CMD ["sh", "/app/start.sh"]
