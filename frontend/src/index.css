@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    @apply bg-surface-950 text-surface-100 font-sans;
+    margin: 0;
+  }
+
+  /* Custom scrollbar — subtle dark style */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-surface-900; }
+  ::-webkit-scrollbar-thumb { @apply bg-surface-600 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-surface-500; }
+}
+
+@layer components {
+  .card {
+    @apply bg-surface-900 border border-surface-800 rounded-xl;
+  }
+  .card-header {
+    @apply px-4 py-3 border-b border-surface-800 flex items-center justify-between;
+  }
+  .card-body {
+    @apply p-4;
+  }
+  .badge-online  { @apply inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-energy-green/15 text-energy-green; }
+  .badge-warning { @apply inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-energy-amber/15 text-energy-amber; }
+  .badge-offline { @apply inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-energy-red/15 text-energy-red; }
+  .badge-disabled{ @apply inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-surface-700/50 text-surface-400; }
+
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition-colors;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-800 hover:bg-surface-700 text-surface-200 text-sm font-medium transition-colors border border-surface-700;
+  }
+
+  .select-field {
+    @apply bg-surface-800 border border-surface-700 text-surface-100 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500;
+  }
+  .input-field {
+    @apply bg-surface-800 border border-surface-700 text-surface-100 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 placeholder:text-surface-500;
+  }
+}
