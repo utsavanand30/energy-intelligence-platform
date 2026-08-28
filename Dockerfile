@@ -39,6 +39,9 @@ RUN pip install --no-cache-dir --upgrade pip \
 # Copy backend application code
 COPY backend/ ./
 
+# Copy startup script (must be after COPY backend/ so it lands in /app)
+COPY start.sh ./start.sh
+
 # Copy built frontend from stage 1 into the location main.py expects:
 #   /app/frontend/dist
 COPY --from=frontend-builder /build/frontend/dist ./frontend/dist
@@ -51,8 +54,5 @@ USER appuser
 # Expose the port Render maps to
 EXPOSE 8000
 
-# Startup: run migrations then start the server
-# Using a shell script so we can chain commands cleanly
-CMD ["sh", "-c", \
-     "python -m app.seed.run_seed && \
-      uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1"]
+# Startup: seed master data + historical data if fresh, then start server
+CMD ["sh", "/app/start.sh"]
