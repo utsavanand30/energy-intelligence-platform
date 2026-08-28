@@ -17,3 +17,12 @@ export const fetchMachines = (params: {
   shed_id?: number
   plant_id?: number
 }) => api.get<Machine[]>('/machines', { params }).then((r) => r.data)
+
+import type { EnergyMeter } from '../types'
+
+export const fetchMeters = (params: {
+  plant_id?: number
+  shed_id?: number
+  section_id?: number
+  machine_id?: number
+}) => api.get<EnergyMeter[]>('/meters', { params }).then((r) => r.data)

@@ -10,16 +10,17 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
+    "axios": "^1.7.7",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "echarts": "^5.5.1",
+    "echarts-for-react": "^3.0.2",
+    "lucide-react": "^0.447.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.2",
-    "axios": "^1.7.7",
-    "echarts": "^5.5.1",
-    "echarts-for-react": "^3.0.2",
-    "zustand": "^5.0.0",
-    "lucide-react": "^0.447.0",
-    "date-fns": "^4.1.0",
-    "clsx": "^2.1.1"
+    "xlsx": "^0.18.5",
+    "zustand": "^5.0.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.11",

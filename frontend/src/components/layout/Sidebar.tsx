@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Zap, Activity, BarChart3,
   Settings, FileText, AlertTriangle, TrendingUp,
   ChevronRight, ChevronDown, Building2, Factory,
-  Layers, Cpu,
+  Layers, Cpu, GitBranch, X,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useState } from 'react'
@@ -12,20 +12,22 @@ import { useHierarchy } from '../../hooks/useHierarchy'
 import { useNavigationStore } from '../../store/navigationStore'
 
 const NAV_ITEMS = [
-  { label: 'Energy Overview', path: '/', icon: LayoutDashboard, end: true },
-  { label: 'Energy Hub', path: '/energy-hub', icon: Zap },
-  { label: 'Live Metrics', path: '/live-metrics', icon: Activity },
-  { label: 'Analytics', path: '/analytics', icon: TrendingUp },
-  { label: 'Reports', path: '/reports', icon: FileText },
-  { label: 'Configuration', path: '/configuration', icon: Settings },
-  { label: 'Meter Health', path: '/meter-health', icon: AlertTriangle },
+  { label: 'Energy Overview', path: '/',            icon: LayoutDashboard, end: true },
+  { label: 'Energy Hub',      path: '/energy-hub',  icon: Zap },
+  { label: 'Live Metrics',    path: '/live-metrics', icon: Activity },
+  { label: 'Analytics',       path: '/analytics',   icon: TrendingUp },
+  { label: 'SLD Diagram',     path: '/sld',         icon: GitBranch },
+  { label: 'Reports',         path: '/reports',     icon: FileText },
+  { label: 'Configuration',   path: '/configuration', icon: Settings },
+  { label: 'Meter Health',    path: '/meter-health', icon: AlertTriangle },
 ]
 
-function NavItem({ item }: { item: typeof NAV_ITEMS[0] }) {
+function NavItem({ item, onClose }: { item: typeof NAV_ITEMS[0]; onClose?: () => void }) {
   return (
     <NavLink
       to={item.path}
       end={item.end}
+      onClick={onClose}
       className={({ isActive }) =>
         clsx(
           'group flex items-center gap-2.5 px-3 py-2 rounded-lg mb-0.5 text-sm transition-all',
@@ -151,7 +153,11 @@ function HierarchyExplorer() {
   )
 }
 
-export default function Sidebar() {
+interface SidebarProps {
+  onClose?: () => void
+}
+
+export default function Sidebar({ onClose }: SidebarProps) {
   return (
     <aside className="w-56 shrink-0 bg-surface-900 border-r border-surface-800 flex flex-col h-screen sticky top-0">
       {/* Logo */}
@@ -160,10 +166,21 @@ export default function Sidebar() {
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
             <Zap size={14} className="text-white" />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <div className="text-sm font-bold text-white leading-tight tracking-tight">EnergyIQ</div>
             <div className="text-[9px] text-surface-500 leading-tight">Cable Plant Monitor</div>
           </div>
+          {/* Close button — only shown in mobile drawer */}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="p-1 rounded hover:bg-surface-800 text-surface-500 hover:text-surface-300 transition-colors shrink-0"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
@@ -172,7 +189,7 @@ export default function Sidebar() {
         <div className="text-[9px] font-bold text-surface-600 uppercase tracking-widest px-3 mb-1.5">
           Navigation
         </div>
-        {NAV_ITEMS.map((item) => <NavItem key={item.path} item={item} />)}
+        {NAV_ITEMS.map((item) => <NavItem key={item.path} item={item} onClose={onClose} />)}
       </nav>
 
       {/* Plant Explorer drill-down */}

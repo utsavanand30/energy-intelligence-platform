@@ -4,6 +4,7 @@ import EnergyOverview from './pages/EnergyOverview'
 import EnergyHub from './pages/EnergyHub'
 import LiveMetrics from './pages/LiveMetrics'
 import Analytics from './pages/Analytics'
+import SLDPage from './pages/SLD'
 import Configuration from './pages/Configuration'
 import Reports from './pages/Reports'
 import MeterHealthPage from './pages/MeterHealth'
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="energy-hub" element={<EnergyHub />} />
           <Route path="live-metrics" element={<LiveMetrics />} />
           <Route path="analytics" element={<Analytics />} />
+          <Route path="sld" element={<SLDPage />} />
           <Route path="configuration" element={<Configuration />} />
           <Route path="reports" element={<Reports />} />
           <Route path="meter-health" element={<MeterHealthPage />} />
