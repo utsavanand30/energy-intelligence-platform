@@ -1,26 +1,27 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 1 — Build React frontend
+# Optimised for Railway: uses npm install (not npm ci) to avoid lock
+# file version conflicts, and sets NODE_OPTIONS for low-memory builds.
 # ─────────────────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS frontend-builder
 
 WORKDIR /build/frontend
 
-# Install deps first (better layer cache)
-COPY frontend/package.json frontend/package-lock.json* ./
-RUN npm ci --legacy-peer-deps
+# Increase Node heap size for Railway's build container (512 MB limit)
+ENV NODE_OPTIONS="--max-old-space-size=460"
 
-# Build production bundle → /build/frontend/dist
+COPY frontend/package.json ./
+# Use install (not ci) — more forgiving of lock file differences
+RUN npm install --legacy-peer-deps --no-audit --no-fund
+
 COPY frontend/ ./
 RUN npm run build
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Stage 2 — Python backend  +  built frontend static files
+# Stage 2 — Python backend + built frontend
 # ─────────────────────────────────────────────────────────────────────────────
 FROM python:3.11-slim AS backend
 
-# libpq-dev  → psycopg2 SSL support (needed for Neon.tech)
-# gcc        → some numpy/pandas C extensions
-# curl       → healthcheck probing
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libpq-dev \
         gcc \
@@ -29,19 +30,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Python dependencies
+# Install Python packages
 COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir --upgrade pip \
  && pip install --no-cache-dir -r requirements.txt
 
-# Application code
+# App source
 COPY backend/ ./
 
-# Startup script (sits at repo root)
+# Startup script
 COPY start.sh ./start.sh
 RUN chmod +x ./start.sh
 
-# Built React app → /app/frontend/dist  (path main.py expects)
+# React build output
 COPY --from=frontend-builder /build/frontend/dist ./frontend/dist
 
 # Non-root user
@@ -50,9 +51,7 @@ RUN addgroup --system appgroup \
  && chown -R appuser:appgroup /app
 USER appuser
 
-# PORT is injected by Koyeb/Render at runtime; default to 8000 locally
 ENV PORT=8000
 EXPOSE 8000
 
-# start.sh: seeds DB if empty, then starts uvicorn on $PORT
 CMD ["sh", "/app/start.sh"]
