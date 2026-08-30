@@ -6,37 +6,50 @@ import { useWebSocket } from '../../hooks/useWebSocket'
 
 export default function Layout() {
   useWebSocket()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  // Desktop collapse state — persisted in local storage so it survives refresh
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem('sidebar_collapsed') === 'true' }
+    catch { return false }
+  })
+
+  const toggleCollapsed = () => {
+    setCollapsed(v => {
+      try { localStorage.setItem('sidebar_collapsed', String(!v)) } catch {}
+      return !v
+    })
+  }
 
   return (
     <div className="flex h-screen bg-surface-950 overflow-hidden">
-      {/* ── Desktop sidebar (hidden on mobile) ─────────────── */}
-      <div className="hidden lg:flex">
-        <Sidebar />
+      {/* ── Desktop sidebar ─────────────────────────────────── */}
+      <div className="hidden lg:flex shrink-0 transition-all duration-200"
+        style={{ width: collapsed ? 52 : 224 }}>
+        <Sidebar collapsed={collapsed} onToggleCollapse={toggleCollapsed} />
       </div>
 
       {/* ── Mobile sidebar overlay ──────────────────────────── */}
-      {sidebarOpen && (
+      {mobileSidebarOpen && (
         <>
-          {/* Backdrop */}
           <div
             className="fixed inset-0 bg-black/60 z-40 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
+            onClick={() => setMobileSidebarOpen(false)}
           />
-          {/* Drawer */}
-          <div className="fixed left-0 top-0 bottom-0 z-50 lg:hidden"
-            style={{ animation: 'slideInLeft 0.22s ease-out' }}>
-            <Sidebar onClose={() => setSidebarOpen(false)} />
+          <div
+            className="fixed left-0 top-0 bottom-0 z-50 lg:hidden"
+            style={{ animation: 'slideInLeft 0.22s ease-out' }}
+          >
+            <Sidebar onClose={() => setMobileSidebarOpen(false)} />
           </div>
         </>
       )}
 
       {/* ── Main content ────────────────────────────────────── */}
       <main className="flex-1 overflow-hidden flex flex-col min-w-0">
-        {/* Hamburger button — mobile only */}
+        {/* Hamburger — mobile only */}
         <div className="lg:hidden flex items-center gap-3 px-4 py-2.5 border-b border-surface-800 bg-surface-900">
           <button
-            onClick={() => setSidebarOpen(true)}
+            onClick={() => setMobileSidebarOpen(true)}
             className="p-2 rounded-lg hover:bg-surface-800 transition-colors"
             aria-label="Open menu"
           >
@@ -60,7 +73,6 @@ export default function Layout() {
           <Outlet />
         </div>
 
-        {/* ── Mobile bottom navigation bar ────────────────── */}
         <MobileNav />
       </main>
 
