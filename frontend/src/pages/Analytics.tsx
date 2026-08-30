@@ -75,6 +75,7 @@ export default function Analytics() {
   const [mmReadings,        setMmReadings]        = useState<Record<number, MeterReading[]>>({})
   const [mmLoading,         setMmLoading]         = useState(false)
   const [mmTimeRange,       setMmTimeRange]       = useState('24h')
+  const [mmSearch,          setMmSearch]          = useState('')
 
   // ── Multi-param comparison state ────────────────────────────────────────
   const [mpMachineId,   setMpMachineId]   = useState<number | null>(null)
@@ -106,6 +107,8 @@ export default function Analytics() {
         fetchEnergyOverview(p),
         fetchEnergyTrend({ ...p, granularity: 'daily', from_dt: fromDate, to_dt: toDate }),
         fetchEnergyTrend({ ...p, granularity: 'daily', from_dt: prevFrom, to_dt: fromDate }),
+        // Always load ALL machines + meters for the full plant (not filtered by shed/section)
+        // so multi-machine comparison shows every meter
         fetchMachines({ plant_id: selectedPlantId }),
         fetchMeters({ plant_id: selectedPlantId }),
       ])
@@ -269,6 +272,7 @@ export default function Analytics() {
 
   const buildMultiMachineOption = (): EChartsOption => {
     const machineById = Object.fromEntries(allMachines.map(m => [m.id, m]))
+    const meterByMachineId = Object.fromEntries(allMeters.filter(m => m.machine_id).map(m => [m.machine_id!, m]))
     const timestamps = Object.values(mmReadings)[0]?.map(r => {
       const d = new Date(r.timestamp)
       return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
@@ -278,7 +282,12 @@ export default function Analytics() {
       backgroundColor: 'transparent',
       grid: { top: 48, right: 20, bottom: 48, left: 56 },
       legend: { top: 8, textStyle: { color: '#94a3b8', fontSize: 10 },
-        data: selectedMachines.map(id => machineById[id]?.name ?? String(id)) },
+        data: selectedMachines.map(id => {
+          const m = machineById[id]
+          const mt = meterByMachineId[id]
+          return m?.name ?? mt?.identification ?? String(id)
+        })
+      },
       tooltip: { trigger: 'axis', backgroundColor: '#1e293b', borderColor: '#334155',
         textStyle: { color: '#e2e8f0', fontSize: 11 } },
       xAxis: { type: 'category', data: timestamps,
@@ -291,9 +300,11 @@ export default function Analytics() {
         splitLine: { lineStyle: { color: '#1e293b', type: 'dashed' } },
         axisLine: { show: false }, axisTick: { show: false } },
       series: selectedMachines.map((machineId, idx) => {
+        const m = machineById[machineId]
+        const mt = meterByMachineId[machineId]
         const data = mmReadings[machineId] ?? []
         return {
-          name: machineById[machineId]?.name ?? String(machineId),
+          name: m?.name ?? mt?.identification ?? String(machineId),
           type: 'line',
           data: data.map(r => (r as any)[mmParam] ?? null),
           smooth: true,
@@ -613,46 +624,90 @@ export default function Analytics() {
             {analyticsTab === 'multi_machine' && (
               <div className="p-5 space-y-4">
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                  {/* Left panel: machine selector */}
-                  <div className="card">
+                  {/* Left panel: meter/machine selector with search */}
+                  <div className="card flex flex-col">
                     <div className="card-header">
-                      <span className="text-sm font-semibold text-surface-200">Select Machines</span>
-                      <span className="text-[10px] text-surface-500">{selectedMachines.length} selected</span>
+                      <span className="text-sm font-semibold text-surface-200">Select Meters</span>
+                      <span className="text-[10px] text-surface-500">{selectedMachines.length}/8 selected</span>
                     </div>
-                    <div className="p-3 space-y-1 max-h-96 overflow-y-auto">
-                      {allMachines.length === 0 && (
-                        <p className="text-xs text-surface-500 text-center py-4">Loading machines…</p>
-                      )}
-                      {allMachines.map(m => {
-                        const isSelected = selectedMachines.includes(m.id)
-                        return (
-                          <button
-                            key={m.id}
-                            onClick={() => setSelectedMachines(prev =>
-                              isSelected
-                                ? prev.filter(id => id !== m.id)
-                                : prev.length >= 8 ? prev : [...prev, m.id]
-                            )}
-                            className={clsx(
-                              'w-full flex items-center justify-between px-2.5 py-2 rounded text-xs transition-all text-left',
-                              isSelected
-                                ? 'bg-brand-600/20 text-brand-300 border border-brand-600/30'
-                                : 'text-surface-400 hover:text-surface-200 hover:bg-surface-800',
-                            )}
-                          >
-                            <div className="min-w-0">
-                              <div className="font-medium truncate">{m.name}</div>
-                              <div className="text-[9px] text-surface-600 truncate">{m.section_name}</div>
-                            </div>
-                            {isSelected && (
-                              <div
-                                className="w-2 h-2 rounded-full shrink-0 ml-1"
-                                style={{ backgroundColor: CHART_COLORS[selectedMachines.indexOf(m.id) % CHART_COLORS.length] }}
-                              />
-                            )}
-                          </button>
+                    {/* Search box */}
+                    <div className="px-3 pt-2 pb-1">
+                      <input
+                        className="input-field w-full text-xs py-1.5"
+                        placeholder="Search meter or machine…"
+                        value={mmSearch ?? ''}
+                        onChange={e => setMmSearch(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex-1 overflow-y-auto max-h-80 px-3 pb-3 space-y-0.5">
+                      {(() => {
+                        // Build a flat list of all meters with machine names — unfiltered by shed/section
+                        const searchLower = (mmSearch ?? '').toLowerCase()
+                        const items = allMeters
+                          .filter(mt => mt.enabled && mt.machine_id != null)
+                          .filter(mt => {
+                            if (!searchLower) return true
+                            const machineName = allMachines.find(m => m.id === mt.machine_id)?.name ?? ''
+                            return (
+                              mt.identification.toLowerCase().includes(searchLower) ||
+                              machineName.toLowerCase().includes(searchLower) ||
+                              (mt.section_name ?? '').toLowerCase().includes(searchLower)
+                            )
+                          })
+                          .sort((a, b) => (a.machine_name ?? a.identification).localeCompare(b.machine_name ?? b.identification))
+
+                        if (items.length === 0) return (
+                          <p className="text-xs text-surface-500 text-center py-4">No meters found</p>
                         )
-                      })}
+
+                        // Group by section for display
+                        const grouped: Record<string, typeof items> = {}
+                        for (const mt of items) {
+                          const key = mt.section_name ?? 'Other'
+                          if (!grouped[key]) grouped[key] = []
+                          grouped[key].push(mt)
+                        }
+
+                        return Object.entries(grouped).map(([sectionName, sectionMeters]) => (
+                          <div key={sectionName}>
+                            <div className="text-[9px] text-surface-600 uppercase tracking-widest font-semibold px-1 py-1.5 sticky top-0 bg-surface-900">
+                              {sectionName}
+                            </div>
+                            {sectionMeters.map(mt => {
+                              const machineId = mt.machine_id!
+                              const isSelected = selectedMachines.includes(machineId)
+                              const selIdx = selectedMachines.indexOf(machineId)
+                              return (
+                                <button
+                                  key={mt.id}
+                                  onClick={() => setSelectedMachines(prev =>
+                                    isSelected
+                                      ? prev.filter(id => id !== machineId)
+                                      : prev.length >= 8 ? prev : [...prev, machineId]
+                                  )}
+                                  className={clsx(
+                                    'w-full flex items-center justify-between px-2 py-1.5 rounded text-xs transition-all text-left',
+                                    isSelected
+                                      ? 'bg-brand-600/20 text-brand-300 border border-brand-600/30'
+                                      : 'text-surface-400 hover:text-surface-200 hover:bg-surface-800',
+                                  )}
+                                >
+                                  <div className="min-w-0 flex-1">
+                                    <div className="font-medium truncate">{mt.machine_name ?? mt.identification}</div>
+                                    <div className="text-[9px] text-surface-600 truncate font-mono">{mt.identification}</div>
+                                  </div>
+                                  {isSelected && (
+                                    <div
+                                      className="w-2 h-2 rounded-full shrink-0 ml-1"
+                                      style={{ backgroundColor: CHART_COLORS[selIdx % CHART_COLORS.length] }}
+                                    />
+                                  )}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        ))
+                      })()}
                     </div>
                     {selectedMachines.length > 0 && (
                       <div className="p-2 border-t border-surface-800">

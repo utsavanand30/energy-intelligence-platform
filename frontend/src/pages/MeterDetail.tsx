@@ -55,7 +55,7 @@ function ValueBox({
   )
 }
 
-/** Single horizontal phase line — matches reference diagram */
+/** Single horizontal phase line — matches reference Polycab Meter Detail diagram */
 function PhaseLine({
   phase, color, vLN, vLL, vLLLabel, current, power,
 }: {
@@ -67,77 +67,87 @@ function PhaseLine({
   current?: number
   power?: number
 }) {
-  const fmt1 = (v?: number) => v != null ? v.toFixed(2) : '—'
+  const fmt = (v?: number, d = 2) => v != null ? v.toFixed(d) : '—'
 
   return (
-    <div className="flex items-center gap-0 min-h-[72px]">
-      {/* Phase label bullet */}
-      <div className="flex items-center gap-2 w-20 shrink-0">
-        <div className="w-3 h-3 rounded-full border-2 shrink-0" style={{ borderColor: color, backgroundColor: `${color}20` }} />
-        <span className="text-sm font-bold" style={{ color }}>{phase} Phase</span>
+    <div className="relative flex items-stretch min-h-[80px] py-3">
+      {/* Phase label — left col */}
+      <div className="w-16 shrink-0 flex items-center">
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-full border-2 shrink-0"
+            style={{ borderColor: color, backgroundColor: `${color}25` }} />
+          <span className="text-sm font-bold" style={{ color }}>{phase}</span>
+        </div>
       </div>
 
-      {/* Phase line with nodes */}
-      <div className="flex-1 flex items-center relative">
-        {/* Horizontal line */}
-        <div className="absolute left-0 right-0 h-px" style={{ backgroundColor: color, opacity: 0.6 }} />
+      {/* Continuous horizontal bus line for this phase */}
+      <div className="flex-1 relative flex items-center">
+        {/* The full-width phase line */}
+        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px"
+          style={{ backgroundColor: color, opacity: 0.5 }} />
 
-        {/* Node 1: Phase voltage L-N */}
-        <div className="relative z-10 flex flex-col items-center mr-6">
-          <div className="w-3 h-3 rounded-full border-2 bg-surface-900 shrink-0" style={{ borderColor: color }} />
-          {/* Voltage value below */}
+        {/* Dotted vertical reference lines */}
+        <div className="absolute h-[200%] top-[-50%] border-l border-dashed border-surface-700/60"
+          style={{ left: '22%' }} />
+        <div className="absolute h-[200%] top-[-50%] border-l border-dashed border-surface-700/60"
+          style={{ left: '44%' }} />
+        <div className="absolute h-[200%] top-[-50%] border-l border-dashed border-surface-700/60"
+          style={{ left: '72%' }} />
+
+        {/* ── Column 1: L-N voltage node ── */}
+        <div className="relative z-10 flex flex-col items-center" style={{ width: '22%' }}>
+          <div className="w-3 h-3 rounded-full border-2 bg-surface-900 -ml-1.5"
+            style={{ borderColor: color }} />
+          {/* L-L voltage label below node (between phases) */}
           <div className="mt-2 text-center">
-            <div className="text-[11px] font-bold font-mono" style={{ color }}>
-              {fmt1(vLN)} V
+            <div className="text-xs font-bold font-mono" style={{ color }}>
+              {fmt(vLN)} V
             </div>
             <div className="text-[8px] text-surface-500">V{phase}N</div>
           </div>
-        </div>
-
-        {/* L-L voltage shown between phases (below the line) */}
-        <div className="relative z-10 flex flex-col items-center mr-6">
-          <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color, opacity: 0.5 }} />
-          <div className="mt-2 text-center">
-            <div className="text-[10px] font-mono text-surface-400">
-              {fmt1(vLL)} V
+          {vLL != null && (
+            <div className="mt-1 text-center">
+              <div className="text-[9px] font-mono text-surface-400">{fmt(vLL)} {vLLLabel}</div>
             </div>
-            <div className="text-[8px] text-surface-500">{vLLLabel}</div>
-          </div>
+          )}
         </div>
 
-        {/* Node 2: Current */}
-        <div className="relative z-10 flex flex-col items-center mr-6">
-          {/* Arrow → */}
-          <div className="flex items-center gap-1">
-            <div className="w-4 h-px" style={{ backgroundColor: color }} />
-            <div className="w-0 h-0 border-t-4 border-b-4 border-l-4 border-transparent" style={{ borderLeftColor: color }} />
+        {/* ── Column 2: Current ── */}
+        <div className="relative z-10 flex flex-col items-center" style={{ width: '22%' }}>
+          {/* Arrow symbol */}
+          <div className="flex items-center gap-0.5">
+            <div className="w-3 h-px" style={{ backgroundColor: color }} />
+            <div className="w-0 h-0 border-y-[3px] border-l-[5px] border-transparent"
+              style={{ borderLeftColor: color }} />
+            <div className="w-px h-3" style={{ backgroundColor: color }} />
+            <div className="w-0 h-0 border-y-[3px] border-l-[5px] border-transparent"
+              style={{ borderLeftColor: color }} />
           </div>
           <div className="mt-2 text-center">
-            <div className="text-[11px] font-bold font-mono" style={{ color }}>
-              I{phase} {fmt1(current)} A
+            <div className="text-xs font-bold font-mono" style={{ color }}>
+              I{phase} {fmt(current)} A
             </div>
             <div className="text-[8px] text-surface-500">Phase Current</div>
           </div>
         </div>
 
-        {/* Arrow connector */}
-        <div className="relative z-10 flex flex-col items-center mr-6">
-          <div className="flex items-center gap-1">
-            <div className="w-4 h-px" style={{ backgroundColor: color }} />
-            <div className="w-0 h-0 border-t-4 border-b-4 border-l-4 border-transparent" style={{ borderLeftColor: color }} />
+        {/* ── Column 3: Power ── */}
+        <div className="relative z-10 flex flex-col items-center" style={{ width: '28%', marginLeft: '1%' }}>
+          <div className="flex items-center gap-0.5">
+            <div className="w-3 h-px" style={{ backgroundColor: color }} />
+            <div className="w-0 h-0 border-y-[3px] border-l-[5px] border-transparent"
+              style={{ borderLeftColor: color }} />
           </div>
           <div className="mt-2 text-center">
-            <div className="text-[11px] font-bold font-mono text-surface-300">
-              {fmt1(power)} kW
+            <div className="text-xs font-bold font-mono text-surface-200">
+              {fmt(power)} kW
             </div>
             <div className="text-[8px] text-surface-500">Power</div>
           </div>
         </div>
 
-        {/* End line to terminal */}
-        <div className="flex-1 relative">
-          <div className="absolute left-0 right-0 h-px top-0" style={{ backgroundColor: color, opacity: 0.3 }} />
-        </div>
+        {/* ── Terminal line to end ── */}
+        <div className="flex-1" />
       </div>
     </div>
   )
@@ -335,13 +345,12 @@ export default function MeterDetail() {
                   </span>
                 </div>
 
-                <div className="p-6 space-y-2">
-                  {/* Column headers */}
-                  <div className="flex items-center gap-0 mb-1 pl-20">
-                    <div className="w-28 text-[9px] text-surface-500 uppercase tracking-wider">Volts L-N</div>
-                    <div className="w-28 text-[9px] text-surface-500 uppercase tracking-wider">Volts L-L</div>
-                    <div className="w-32 text-[9px] text-surface-500 uppercase tracking-wider">Phase Current</div>
-                    <div className="w-28 text-[9px] text-surface-500 uppercase tracking-wider">Power</div>
+                <div className="p-5 space-y-1">
+                  {/* Column headers matching reference */}
+                  <div className="flex items-center text-[9px] text-surface-500 uppercase tracking-wider mb-3 pl-16">
+                    <div style={{ width: '22%' }}>Volts L-N</div>
+                    <div style={{ width: '22%' }}>Phase Current</div>
+                    <div style={{ width: '28%' }}>Power</div>
                   </div>
 
                   {/* Three phase lines */}
