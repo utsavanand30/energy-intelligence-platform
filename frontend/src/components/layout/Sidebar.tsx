@@ -132,19 +132,34 @@ function HierarchyExplorer() {
             <div className={indent}>
               {pick(sheds, selectedShedId, selectShed, 'shed', <Factory size={11} />, loadingSheds)}
 
-              {/* Sections */}
-              {selectedShedId && (
-                <div className={indent}>
-                  {pick(sections, selectedSectionId, selectSection, 'section', <Layers size={11} />, loadingSections)}
-
-                  {/* Machines */}
-                  {selectedSectionId && (
+              {/* Sections — skip display if the only section shares the shed's name */}
+              {selectedShedId && (() => {
+                const selectedShedObj = sheds.find(s => s.id === selectedShedId)
+                const isSingleSameName =
+                  sections.length === 1 && sections[0].name === selectedShedObj?.name
+                // For single-section sheds with same name, show machines directly
+                if (isSingleSameName && sections[0]) {
+                  // Auto-select it silently so machines cascade
+                  if (!selectedSectionId) {
+                    selectSection(sections[0].id)
+                  }
+                  return (
                     <div className={indent}>
                       {pick(machines, selectedMachineId, selectMachine, 'machine', <Cpu size={11} />, loadingMachines)}
                     </div>
-                  )}
-                </div>
-              )}
+                  )
+                }
+                return (
+                  <div className={indent}>
+                    {pick(sections, selectedSectionId, selectSection, 'section', <Layers size={11} />, loadingSections)}
+                    {selectedSectionId && (
+                      <div className={indent}>
+                        {pick(machines, selectedMachineId, selectMachine, 'machine', <Cpu size={11} />, loadingMachines)}
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
             </div>
           )}
         </div>

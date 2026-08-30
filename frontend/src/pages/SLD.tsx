@@ -1,288 +1,180 @@
 /**
- * SLD — Single Line Diagram
+ * SLD — Single Line Diagram (Electrical Distribution)
  *
- * Renders an interactive one-line electrical diagram of the plant:
- *
- *   Grid Supply (33kV)
- *     └── Main Incoming Breaker
- *           └── Main Bus Bar (415V)
- *                 ├── Conductor PDB-01 → [Bunching, RBD, Stranding, Multiwire]
- *                 ├── Cable PDB        → [Insulation, Armouring, Laying Up, Sheathing]
- *                 └── Utility PDB     → [Others / PDBs]
- *
- * Each energy meter node shows live kW + status colour from the WebSocket store.
- * Clicking a meter node opens the machine detail drawer.
+ * Matches the reference Polycab MOS style:
+ *   - White/light card nodes with dark text
+ *   - Blue PF value, black kW with bar-chart icon
+ *   - True top-down tree:
+ *       Level 0 : Incomers / Main panels (connected via horizontal bus bar)
+ *       Level 1 : PDB nodes (distribution boards) — hanging off bus with arrows
+ *       Level 2 : Machines / load nodes — fanning out from each PDB
+ *   - Canvas is scrollable both X and Y
+ *   - Zoom in/out controls
+ *   - Clicking any node opens the meter detail view
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/layout/TopBar'
-import StatusBadge from '../components/common/StatusBadge'
-import MachineDrawer from '../components/machines/MachineDrawer'
 import { useHierarchy } from '../hooks/useHierarchy'
 import { useRealtimeStore } from '../store/realtimeStore'
-import { useNavigationStore } from '../store/navigationStore'
 import { fetchMeters, fetchMachines } from '../api/hierarchy'
 import type { EnergyMeter, Machine } from '../types'
-import { fmtKw, fmtPf, fmtVolts } from '../utils/formatters'
-import { Zap, Radio, ChevronDown, ChevronRight, Info, Activity } from 'lucide-react'
+import { ZoomIn, ZoomOut, RefreshCw, Maximize2 } from 'lucide-react'
 import clsx from 'clsx'
 
-// ── Colour helpers ──────────────────────────────────────────────────────────
-function loadColour(pct: number) {
-  if (pct >= 90) return '#ef4444'
-  if (pct >= 70) return '#f59e0b'
-  return '#22c55e'
+// ── Colour helpers ───────────────────────────────────────────────────────────
+function pfColour(pf: number | undefined): string {
+  if (!pf) return '#94a3b8'
+  if (pf >= 0.9) return '#2563eb'   // blue — good
+  if (pf >= 0.85) return '#d97706'  // amber — warning
+  return '#dc2626'                   // red — bad
 }
-function statusColour(status: string) {
-  switch (status) {
-    case 'ONLINE':  return '#22c55e'
-    case 'WARNING': return '#f59e0b'
-    case 'OFFLINE': return '#ef4444'
-    default:        return '#64748b'
-  }
+function kwColour(pct: number): string {
+  if (pct >= 90) return '#dc2626'
+  if (pct >= 70) return '#d97706'
+  return '#16a34a'
 }
 
-// ── Types ───────────────────────────────────────────────────────────────────
-interface MeterWithMachine {
-  meter: EnergyMeter
-  machine?: Machine
+// ── Known PDB → machines mapping ─────────────────────────────────────────────
+// This maps each PDB node (machine name in DB) to the machines it feeds.
+// PDB nodes appear as Level-1 nodes; their downstream loads appear at Level-2.
+const PDB_FEEDS: Record<string, string[]> = {
+  'Conductor PDB-01': ['Bunching-02', 'Bunching-03', 'Bunching-06', 'Bunching-07', 'Bunching-08', 'Stranding-09', 'Stranding-10'],
+  'Conductor PDB-02': ['MWD-04', 'MWD-06', 'MWD-07', 'MWD-08', 'Bunching-01', 'Bunching-04'],
+  'Conductor PDB-03': ['Bunching-05', 'Stranding-05', 'Stranding-06', 'Stranding-07', 'Stranding-08', 'Annealing Furnace'],
+  'Armouring PDB':    ['Armouring-1', 'Armouring-2', 'Armouring-3', 'Armouring-4', 'Armouring-5', 'Armouring-7'],
+  'Insulation PDB':   ['Extruder-01', 'Extruder-02', 'Extruder-03', 'Extruder-04', 'Extruder-05', 'Extruder-09'],
+  'DT & Arm PDB':     ['Drum Twister-1', 'Drum Twister-2', 'Drum Twister-3', 'Drum Twister-4'],
+  'Outer PDB':        ['Extruder-06', 'Extruder-07', 'Extruder-08'],
+  'Utility PDB':      ['QC Lab / Spar', 'Reprocessing'],
 }
 
-interface SectionGroup {
-  sectionName: string
-  shedName: string
-  items: MeterWithMachine[]
-}
+// Incomer nodes (Level-0, connected directly to the main bus)
+const INCOMER_NAMES = [
+  'ACB / Solar Panel',
+  'APFC 1',
+  'APFC 2',
+  'DG',
+  'Incommer Breaker 1 New',
+  'Incommer Breaker 2 New',
+]
 
-// ── Sub-components ──────────────────────────────────────────────────────────
+// Nodes that are PDBs but shown at Level-1
+const PDB_NAMES = Object.keys(PDB_FEEDS)
 
-function BusBar({ label, voltage, className }: { label: string; voltage: string; className?: string }) {
-  return (
-    <div className={clsx('relative flex flex-col items-center', className)}>
-      {/* Bus label */}
-      <div className="text-[10px] font-semibold text-surface-400 mb-1">{label}</div>
-      {/* Thick horizontal bar */}
-      <div className="w-full h-3 bg-gradient-to-r from-brand-700 via-brand-500 to-brand-700 rounded-sm shadow-lg shadow-brand-900/50 border border-brand-400/30 flex items-center justify-center">
-        <span className="text-[8px] font-bold text-brand-200 tracking-widest">{voltage}</span>
-      </div>
-    </div>
-  )
-}
-
-function GridSupply({ totalKw, meterCount }: { totalKw: number; meterCount: number }) {
-  return (
-    <div className="flex flex-col items-center">
-      {/* Grid tower icon */}
-      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-surface-700 to-surface-800 border border-surface-600 flex items-center justify-center shadow-xl mb-1">
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-          {/* Pylon */}
-          <line x1="16" y1="2"  x2="8"  y2="30" stroke="#94a3b8" strokeWidth="1.5"/>
-          <line x1="16" y1="2"  x2="24" y2="30" stroke="#94a3b8" strokeWidth="1.5"/>
-          <line x1="6"  y1="12" x2="26" y2="12" stroke="#94a3b8" strokeWidth="1.5"/>
-          <line x1="9"  y1="20" x2="23" y2="20" stroke="#94a3b8" strokeWidth="1.5"/>
-          {/* Cross arms */}
-          <line x1="4"  y1="12" x2="8"  y2="12" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round"/>
-          <line x1="24" y1="12" x2="28" y2="12" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round"/>
-          <line x1="7"  y1="20" x2="10" y2="20" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round"/>
-          <line x1="22" y1="20" x2="25" y2="20" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round"/>
-          {/* Insulators dots */}
-          <circle cx="4"  cy="12" r="1.5" fill="#fbbf24"/>
-          <circle cx="28" cy="12" r="1.5" fill="#fbbf24"/>
-          <circle cx="7"  cy="20" r="1.5" fill="#fbbf24"/>
-          <circle cx="25" cy="20" r="1.5" fill="#fbbf24"/>
-        </svg>
-      </div>
-      <div className="text-xs font-bold text-surface-200">Grid Supply</div>
-      <div className="text-[10px] text-surface-500">33 kV / 415 V</div>
-      <div className="mt-1 flex items-center gap-2 text-[10px]">
-        <span className="text-emerald-400 font-mono font-bold">{fmtKw(totalKw)}</span>
-        <span className="text-surface-600">·</span>
-        <span className="text-surface-400">{meterCount} meters</span>
-      </div>
-    </div>
-  )
-}
-
-function Breaker({ label, isOpen = false, onClick }: { label: string; isOpen?: boolean; onClick?: () => void }) {
-  return (
-    <div
-      className={clsx(
-        'flex flex-col items-center cursor-pointer group',
-        onClick && 'hover:opacity-90',
-      )}
-      onClick={onClick}
-    >
-      <div className={clsx(
-        'w-8 h-5 rounded border-2 flex items-center justify-center transition-colors',
-        isOpen ? 'border-emerald-500 bg-emerald-900/40' : 'border-surface-600 bg-surface-800',
-      )}>
-        <div className={clsx('w-3 h-0.5 rounded-full transition-colors',
-          isOpen ? 'bg-emerald-400' : 'bg-surface-500')} />
-      </div>
-      <span className="text-[8px] text-surface-500 mt-0.5 group-hover:text-surface-300 transition-colors">{label}</span>
-    </div>
-  )
-}
-
-function Wire({ vertical = false, length = 16 }: { vertical?: boolean; length?: number }) {
-  return (
-    <div
-      className="bg-brand-600/60 rounded-full flex-shrink-0"
-      style={vertical
-        ? { width: 2, height: length }
-        : { height: 2, width: length }
-      }
-    />
-  )
-}
-
-function MeterNode({
-  meter, machine, onClick,
-}: {
-  meter: EnergyMeter
-  machine?: Machine
+// ── Node card component ───────────────────────────────────────────────────────
+interface NodeCardProps {
+  name: string
+  meter?: EnergyMeter
+  isIncomer?: boolean
+  isPDB?: boolean
   onClick?: () => void
-}) {
-  const readings = useRealtimeStore((s) => s.readings)
-  const live = readings[meter.id]
+}
+
+function NodeCard({ name, meter, isIncomer, isPDB, onClick }: NodeCardProps) {
+  const readings = useRealtimeStore(s => s.readings)
+  const live = meter ? readings[meter.id] : undefined
   const kw = live?.active_power_kw ?? 0
-  const rated = machine?.rated_power_kw ?? 200
-  const pct = Math.min(100, rated > 0 ? (kw / rated) * 100 : 0)
-  const colour = live ? loadColour(pct) : statusColour(meter.communication_status)
   const pf = live?.power_factor
-  const voltage = live?.voltage_avg
+  const rated = 400
+  const pct = Math.min(100, (kw / rated) * 100)
+
+  const cardBg = isIncomer
+    ? 'bg-slate-50 border-slate-200'
+    : isPDB
+      ? 'bg-blue-50 border-blue-200'
+      : 'bg-white border-gray-200'
 
   return (
     <button
       onClick={onClick}
-      className="group flex flex-col items-center gap-1 p-2.5 rounded-xl border transition-all hover:scale-105 active:scale-100 text-left min-w-[100px]"
-      style={{
-        borderColor: `${colour}40`,
-        backgroundColor: `${colour}08`,
-        boxShadow: live ? `0 0 12px ${colour}20` : 'none',
-      }}
+      className={clsx(
+        'flex flex-col items-start text-left rounded-lg border-2 shadow-sm',
+        'transition-all hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98]',
+        'min-w-[130px] max-w-[160px] p-2.5 gap-1 select-none',
+        cardBg,
+      )}
     >
-      {/* Meter icon */}
-      <div
-        className="w-9 h-9 rounded-lg flex items-center justify-center"
-        style={{ backgroundColor: `${colour}20`, border: `1px solid ${colour}40` }}
-      >
-        <Radio size={16} style={{ color: colour }} />
-      </div>
-
       {/* Machine name */}
-      <div className="text-[10px] font-semibold text-surface-200 text-center leading-tight max-w-[90px] truncate">
-        {machine?.name ?? meter.identification}
+      <div className="text-[10px] font-bold text-gray-800 leading-tight line-clamp-2 w-full">
+        {name}
       </div>
 
-      {/* Meter ID */}
-      <div className="text-[8px] font-mono text-surface-500 truncate max-w-[90px]">
-        {meter.identification}
+      {/* PF */}
+      <div
+        className="text-[11px] font-semibold"
+        style={{ color: pfColour(pf) }}
+      >
+        PF {pf != null ? pf.toFixed(2) : '—'}
       </div>
 
-      {/* Live values */}
-      {live ? (
-        <div className="w-full space-y-0.5">
-          {/* Load bar */}
-          <div className="h-1 w-full bg-surface-800 rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-700"
-              style={{ width: `${pct}%`, backgroundColor: colour }}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[9px] font-mono font-bold" style={{ color: colour }}>
-              {kw.toFixed(0)} kW
-            </span>
-            <span className="text-[8px] text-surface-500">{pct.toFixed(0)}%</span>
-          </div>
-          {pf && (
-            <div className="text-[8px] text-surface-400 font-mono text-center">
-              PF {pf.toFixed(2)}
-            </div>
-          )}
+      {/* kW with bar icon */}
+      <div className="flex items-center gap-1 mt-0.5">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <rect x="0" y="7" width="2.5" height="5" rx="0.5" fill={live ? kwColour(pct) : '#94a3b8'} />
+          <rect x="3.5" y="4" width="2.5" height="8" rx="0.5" fill={live ? kwColour(pct) : '#94a3b8'} />
+          <rect x="7" y="1" width="2.5" height="11" rx="0.5" fill={live ? kwColour(pct) : '#94a3b8'} />
+        </svg>
+        <span
+          className="text-[11px] font-semibold"
+          style={{ color: live ? kwColour(pct) : '#6b7280' }}
+        >
+          {kw.toFixed(2)} kW
+        </span>
+      </div>
+
+      {/* Load bar */}
+      {live && (
+        <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden mt-0.5">
+          <div
+            className="h-full rounded-full transition-all duration-700"
+            style={{ width: `${pct}%`, backgroundColor: kwColour(pct) }}
+          />
         </div>
-      ) : (
-        <div className="text-[8px] text-surface-600">No data</div>
       )}
     </button>
   )
 }
 
-function SectionPanel({ group, onMeterClick }: {
-  group: SectionGroup
-  onMeterClick: (machineId: number) => void
-}) {
-  const [expanded, setExpanded] = useState(true)
-  const readings = useRealtimeStore((s) => s.readings)
-
-  const totalKw = group.items.reduce((sum, { meter }) => {
-    return sum + (readings[meter.id]?.active_power_kw ?? 0)
-  }, 0)
-  const onlineCount = group.items.filter(({ meter }) => readings[meter.id]).length
-
+// ── Arrow / connector lines ───────────────────────────────────────────────────
+function DownArrow({ height = 32 }: { height?: number }) {
   return (
-    <div className="card overflow-hidden">
-      {/* Section header bar */}
-      <button
-        onClick={() => setExpanded(v => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-surface-800/50 transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-2 h-8 rounded-full bg-brand-500" />
-          <div className="text-left">
-            <div className="text-sm font-semibold text-surface-100">{group.sectionName}</div>
-            <div className="text-[10px] text-surface-500">{group.shedName} · {group.items.length} meters</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <div className="text-sm font-bold font-mono text-brand-400">{fmtKw(totalKw)}</div>
-            <div className="text-[9px] text-surface-500">{onlineCount}/{group.items.length} online</div>
-          </div>
-          {expanded ? <ChevronDown size={14} className="text-surface-500" /> : <ChevronRight size={14} className="text-surface-500" />}
-        </div>
-      </button>
+    <svg width="10" height={height} viewBox={`0 0 10 ${height}`} fill="none"
+      className="mx-auto shrink-0">
+      <line x1="5" y1="0" x2="5" y2={height - 7} stroke="#94a3b8" strokeWidth="1.5" />
+      <polygon points={`5,${height} 2,${height - 7} 8,${height - 7}`} fill="#94a3b8" />
+    </svg>
+  )
+}
 
-      {/* Meter nodes grid */}
-      {expanded && (
-        <div className="px-4 pb-4 pt-2 border-t border-surface-800">
-          {/* Connection line from bus */}
-          <div className="flex items-center gap-2 mb-3">
-            <div className="h-0.5 w-4 bg-brand-600/50" />
-            <div className="flex-1 h-0.5 bg-brand-600/30" />
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {group.items.map(({ meter, machine }) => (
-              <MeterNode
-                key={meter.id}
-                meter={meter}
-                machine={machine}
-                onClick={() => machine && onMeterClick(machine.id)}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+function HorizontalBus({ label }: { label: string }) {
+  return (
+    <div className="relative w-full flex items-center">
+      <div className="flex-1 h-3 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600
+        rounded-sm border border-blue-400/60 shadow-md shadow-blue-900/20
+        flex items-center justify-center">
+        <span className="text-[9px] font-bold text-white tracking-widest uppercase">{label}</span>
+      </div>
     </div>
   )
 }
 
-// ── Main SLD Page ───────────────────────────────────────────────────────────
+// ── Main SLD component ────────────────────────────────────────────────────────
 export default function SLDPage() {
-  const { plants, selectedPlantId } = useHierarchy()
-  const { openDrawer } = useNavigationStore()
-  const readings = useRealtimeStore((s) => s.readings)
+  const { selectedPlantId, plants } = useHierarchy()
+  const navigate = useNavigate()
+  const readings = useRealtimeStore(s => s.readings)
 
   const [meters, setMeters] = useState<EnergyMeter[]>([])
   const [machines, setMachines] = useState<Machine[]>([])
   const [loading, setLoading] = useState(false)
-  const [selectedShed, setSelectedShed] = useState<string | null>(null)
+  const [zoom, setZoom] = useState(1)
 
-  // Totals
+  const canvasRef = useRef<HTMLDivElement>(null)
+
   const totalKw = Object.values(readings).reduce((s, r) => s + (r.active_power_kw ?? 0), 0)
-  const onlineMeters = Object.keys(readings).length
 
+  // Load data
   useEffect(() => {
     if (!selectedPlantId) return
     setLoading(true)
@@ -296,188 +188,208 @@ export default function SLDPage() {
       .finally(() => setLoading(false))
   }, [selectedPlantId])
 
-  // Build section groups
-  const machineById = Object.fromEntries(machines.map(m => [m.id, m]))
-  const groups: Record<string, SectionGroup> = {}
-
-  for (const meter of meters) {
-    if (!meter.enabled) continue
-    const machine = meter.machine_id ? machineById[meter.machine_id] : undefined
-    const key = `${meter.shed_name}__${meter.section_name}`
-    if (!groups[key]) {
-      groups[key] = {
-        sectionName: meter.section_name ?? 'Unassigned',
-        shedName: meter.shed_name ?? '—',
-        items: [],
-      }
-    }
-    groups[key].items.push({ meter, machine })
-  }
-
-  // Get unique sheds
-  const sheds = [...new Set(meters.map(m => m.shed_name).filter(Boolean) as string[])]
-
-  // Filter by selected shed
-  const filteredGroups = Object.values(groups).filter(g =>
-    selectedShed === null || g.shedName === selectedShed
+  // Build lookup tables
+  const meterByMachineName = Object.fromEntries(
+    meters.map(m => [m.machine_name ?? '', m])
+  )
+  const machineByName = Object.fromEntries(
+    machines.map(m => [m.name, m])
   )
 
-  // Sort: Conductor first, then Cable, then Others
-  const SHED_ORDER = ['Conductor', 'Cable', 'Others']
-  filteredGroups.sort((a, b) => {
-    const ai = SHED_ORDER.indexOf(a.shedName)
-    const bi = SHED_ORDER.indexOf(b.shedName)
-    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
-  })
+  // ── Node click handler → go to meter detail ────────────────────────────────
+  const handleNodeClick = useCallback((machineName: string) => {
+    const meter = meterByMachineName[machineName]
+    if (meter) {
+      navigate(`/meter-detail/${meter.id}`)
+    }
+  }, [meterByMachineName, navigate])
+
+  // ── Build tree levels ──────────────────────────────────────────────────────
+  // Level 0: Incomers that exist in our machine list
+  const incomerNodes = INCOMER_NAMES.filter(n => machineByName[n])
+
+  // Level 1: PDB nodes
+  const pdbNodes = PDB_NAMES.filter(n => machineByName[n])
+
+  // Level 2: Per PDB, the child machines
+  // Also collect "direct" machines not assigned to any PDB (RBD-02 etc.)
+  const assignedToSomePDB = new Set(Object.values(PDB_FEEDS).flat())
+  const directMachines = machines
+    .filter(m =>
+      !INCOMER_NAMES.includes(m.name) &&
+      !PDB_NAMES.includes(m.name) &&
+      !assignedToSomePDB.has(m.name)
+    )
+    .map(m => m.name)
+
+  // Zoom helpers
+  const zoomIn  = () => setZoom(z => Math.min(1.5, +(z + 0.1).toFixed(1)))
+  const zoomOut = () => setZoom(z => Math.max(0.4, +(z - 0.1).toFixed(1)))
+  const zoomReset = () => setZoom(1)
+
+  const plantName = plants.find(p => p.id === selectedPlantId)?.name ?? 'Plant'
 
   return (
     <div className="flex flex-col h-full">
       <TopBar
-        title="Single Line Diagram"
-        subtitle="Electrical distribution hierarchy — live status"
+        title="Electrical SLD"
+        subtitle={`${plantName} — Single Line Diagram`}
+        actions={
+          <div className="flex items-center gap-1">
+            <button onClick={zoomOut}  className="p-1.5 rounded hover:bg-surface-800 text-surface-400 hover:text-white transition-colors"><ZoomOut  size={14} /></button>
+            <span className="text-xs text-surface-400 w-10 text-center font-mono">{Math.round(zoom * 100)}%</span>
+            <button onClick={zoomIn}   className="p-1.5 rounded hover:bg-surface-800 text-surface-400 hover:text-white transition-colors"><ZoomIn   size={14} /></button>
+            <button onClick={zoomReset} className="p-1.5 rounded hover:bg-surface-800 text-surface-400 hover:text-white transition-colors text-[10px] font-medium">Reset</button>
+            <button
+              onClick={() => { if (selectedPlantId) { setLoading(true); Promise.all([fetchMeters({ plant_id: selectedPlantId }), fetchMachines({ plant_id: selectedPlantId })]).then(([ms, machs]) => { setMeters(ms); setMachines(machs) }).finally(() => setLoading(false)) } }}
+              className="p-1.5 rounded hover:bg-surface-800 text-surface-400 hover:text-white transition-colors"
+            >
+              <RefreshCw size={14} />
+            </button>
+          </div>
+        }
       />
 
-      {/* ── Legend + controls bar ──────────────────────────────────── */}
-      <div className="px-5 py-3 border-b border-surface-800 bg-surface-950/60 flex flex-wrap items-center gap-4">
-        {/* Shed filter pills */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[10px] text-surface-500 font-medium uppercase tracking-wider">Shed:</span>
-          <button
-            onClick={() => setSelectedShed(null)}
-            className={clsx('px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors',
-              selectedShed === null ? 'bg-brand-600 text-white' : 'bg-surface-800 text-surface-400 hover:text-surface-200'
-            )}
-          >
-            All
-          </button>
-          {sheds.map(shed => (
-            <button
-              key={shed}
-              onClick={() => setSelectedShed(shed === selectedShed ? null : shed)}
-              className={clsx('px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors',
-                selectedShed === shed ? 'bg-brand-600 text-white' : 'bg-surface-800 text-surface-400 hover:text-surface-200'
-              )}
-            >
-              {shed}
-            </button>
-          ))}
+      {/* Legend bar */}
+      <div className="px-5 py-2 border-b border-surface-800 bg-surface-950/60 flex flex-wrap items-center gap-6 text-[10px] text-surface-400">
+        <div className="flex items-center gap-1.5">
+          <div className="w-4 h-4 rounded border-2 border-slate-300 bg-slate-50" />
+          <span>Incomer / Supply</span>
         </div>
-
-        {/* Legend */}
-        <div className="flex items-center gap-3 ml-auto text-[9px] text-surface-400 flex-wrap">
-          {[
-            { colour: '#22c55e', label: 'Normal (<70%)' },
-            { colour: '#f59e0b', label: 'High (70–90%)' },
-            { colour: '#ef4444', label: 'Critical (>90%)' },
-            { colour: '#64748b', label: 'Offline' },
-          ].map(l => (
-            <div key={l.label} className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: l.colour }} />
-              {l.label}
-            </div>
-          ))}
+        <div className="flex items-center gap-1.5">
+          <div className="w-4 h-4 rounded border-2 border-blue-300 bg-blue-50" />
+          <span>Distribution Board (PDB)</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-4 h-4 rounded border-2 border-gray-300 bg-white" />
+          <span>Machine / Load</span>
+        </div>
+        <div className="flex items-center gap-4 ml-auto">
+          <span className="flex items-center gap-1"><span className="text-blue-600 font-bold">PF</span> = Power Factor</span>
+          <span className="flex items-center gap-1">
+            <svg width="10" height="10" viewBox="0 0 10 10"><rect x="0" y="5" width="2" height="5" fill="#16a34a" /><rect x="3" y="3" width="2" height="7" fill="#16a34a" /><rect x="6" y="0" width="2" height="10" fill="#16a34a" /></svg>
+            = Load kW
+          </span>
+          <span className="font-mono font-bold text-emerald-400">{totalKw.toFixed(0)} kW total</span>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      {/* ── Main canvas — scrollable, zoomable ─────────────────────────────── */}
+      <div className="flex-1 overflow-auto bg-gray-100" ref={canvasRef}>
         {loading ? (
-          <div className="flex items-center justify-center py-20 text-surface-500">
-            <div className="text-center">
-              <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-sm">Loading diagram…</p>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center text-gray-500">
+              <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-sm">Building diagram…</p>
             </div>
           </div>
         ) : (
-          <div className="p-4 lg:p-6 space-y-6 max-w-7xl mx-auto">
+          <div
+            className="origin-top-left p-8 min-w-max"
+            style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}
+          >
 
-            {/* ── TOP: Grid Supply → Main Bus ──────────────────────── */}
-            <div className="flex flex-col items-center">
-              {/* Grid supply node */}
-              <GridSupply totalKw={totalKw} meterCount={onlineMeters} />
+            {/* ── LEVEL 0: INCOMERS connected via main bus ──────────────── */}
+            <div className="flex flex-col items-center gap-0 mb-0">
 
-              <Wire vertical length={24} />
-              <Breaker label="Main Incomer" isOpen={onlineMeters > 0} />
-              <Wire vertical length={24} />
-
-              {/* Main 415V bus bar */}
-              <BusBar label="MAIN BUS BAR" voltage="415 V" className="w-full max-w-4xl" />
-            </div>
-
-            {/* ── Summary KPI strip ─────────────────────────────────── */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                { label: 'Total Load',    value: fmtKw(totalKw),          colour: 'text-blue-400' },
-                { label: 'Online Meters', value: `${onlineMeters} / ${meters.filter(m=>m.enabled).length}`, colour: 'text-emerald-400' },
-                { label: 'Sections',      value: String(Object.keys(groups).length), colour: 'text-purple-400' },
-                { label: 'Plant',         value: plants.find(p=>p.id===selectedPlantId)?.name ?? '—', colour: 'text-amber-400' },
-              ].map(k => (
-                <div key={k.label} className="card px-4 py-3">
-                  <div className="text-[9px] text-surface-500 uppercase tracking-wider mb-1">{k.label}</div>
-                  <div className={clsx('text-base font-bold font-mono', k.colour)}>{k.value}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* ── SECTION PANELS ──────────────────────────────────────── */}
-            {filteredGroups.length === 0 ? (
-              <div className="text-center py-12 text-surface-500">
-                <Info size={28} className="mx-auto mb-3 opacity-40" />
-                <p className="text-sm">No meters found. Wait for the simulator to start sending readings.</p>
+              {/* Incomer cards in a row */}
+              <div className="flex items-end gap-4 justify-center flex-wrap">
+                {incomerNodes.map(name => (
+                  <div key={name} className="flex flex-col items-center">
+                    <NodeCard
+                      name={name}
+                      meter={meterByMachineName[name]}
+                      isIncomer
+                      onClick={() => handleNodeClick(name)}
+                    />
+                    <DownArrow height={28} />
+                  </div>
+                ))}
               </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Group by shed visually */}
-                {SHED_ORDER.filter(shed => selectedShed === null || shed === selectedShed).map(shedName => {
-                  const shedGroups = filteredGroups.filter(g => g.shedName === shedName)
-                  if (shedGroups.length === 0) return null
-                  const shedKw = shedGroups.reduce((s, g) =>
-                    s + g.items.reduce((ss, { meter }) => ss + (readings[meter.id]?.active_power_kw ?? 0), 0), 0)
 
-                  return (
-                    <div key={shedName}>
-                      {/* Shed header */}
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="h-px flex-1 bg-surface-800" />
-                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-800 border border-surface-700">
-                          <Activity size={12} className="text-brand-400" />
-                          <span className="text-xs font-semibold text-surface-200">{shedName} Shed</span>
-                          <span className="text-[10px] font-mono text-brand-400 font-bold">{fmtKw(shedKw)}</span>
+              {/* Main 415V Bus Bar */}
+              <div className="w-full max-w-5xl px-4">
+                <HorizontalBus label="MAIN BUS BAR — 415 V" />
+              </div>
+            </div>
+
+            {/* ── LEVEL 1: PDB NODES ─────────────────────────────────────── */}
+            {/* Each PDB hangs off the bus with a connector, then fans to machines */}
+            <div className="flex flex-wrap gap-12 justify-start pt-0 mt-2">
+              {pdbNodes.map(pdbName => {
+                const childNames = (PDB_FEEDS[pdbName] ?? []).filter(n => machineByName[n])
+                const pdbMeter = meterByMachineName[pdbName]
+
+                return (
+                  <div key={pdbName} className="flex flex-col items-center min-w-[140px]">
+                    {/* Down arrow from bus to PDB */}
+                    <DownArrow height={36} />
+
+                    {/* PDB card */}
+                    <NodeCard
+                      name={pdbName}
+                      meter={pdbMeter}
+                      isPDB
+                      onClick={() => handleNodeClick(pdbName)}
+                    />
+
+                    {/* Distribution to children */}
+                    {childNames.length > 0 && (
+                      <div className="flex flex-col items-center w-full">
+                        {/* Vertical drop from PDB */}
+                        <div className="w-px h-5 bg-gray-400" />
+
+                        {/* Horizontal distribution bar */}
+                        <div className="relative flex items-center w-full">
+                          <div className="flex-1 h-px bg-gray-400" />
                         </div>
-                        <div className="h-px flex-1 bg-surface-800" />
-                      </div>
 
-                      {/* Distribution line from bus to sections */}
-                      <div className="flex flex-col gap-3 pl-4 border-l-2 border-brand-700/40 ml-6">
-                        {shedGroups.map(group => (
-                          <SectionPanel
-                            key={`${group.shedName}-${group.sectionName}`}
-                            group={group}
-                            onMeterClick={openDrawer}
-                          />
-                        ))}
+                        {/* Child machine cards */}
+                        <div className="flex flex-wrap gap-3 justify-center mt-0 pt-0">
+                          {childNames.map(childName => (
+                            <div key={childName} className="flex flex-col items-center">
+                              <DownArrow height={24} />
+                              <NodeCard
+                                name={childName}
+                                meter={meterByMachineName[childName]}
+                                onClick={() => handleNodeClick(childName)}
+                              />
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+                    )}
+                  </div>
+                )
+              })}
 
-            {/* ── Info footer ──────────────────────────────────────────── */}
-            <div className="card p-4 flex items-start gap-3 border-brand-800/50">
-              <Info size={14} className="text-brand-400 shrink-0 mt-0.5" />
-              <p className="text-[10px] text-surface-500 leading-relaxed">
-                Click any meter node to open the machine detail panel with live electrical parameters and trend charts.
-                Colours indicate load percentage: <span className="text-emerald-400">green</span> = normal,{' '}
-                <span className="text-amber-400">amber</span> = high load,{' '}
-                <span className="text-red-400">red</span> = critical.
-                Offline meters appear in grey.
-              </p>
+              {/* Direct machines (no PDB parent) */}
+              {directMachines.length > 0 && (
+                <div className="flex flex-col items-center">
+                  <DownArrow height={36} />
+                  <div className="text-[9px] text-gray-500 font-semibold mb-2 uppercase tracking-wider">Direct Loads</div>
+                  <div className="flex flex-wrap gap-3">
+                    {directMachines.map(name => (
+                      <div key={name} className="flex flex-col items-center">
+                        <NodeCard
+                          name={name}
+                          meter={meterByMachineName[name]}
+                          onClick={() => handleNodeClick(name)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── Footer note ──────────────────────────────────────────────── */}
+            <div className="mt-12 text-[9px] text-gray-400 text-center">
+              Click any node to view detailed meter parameters · Data updates every 30 seconds
             </div>
           </div>
         )}
       </div>
-
-      <MachineDrawer />
     </div>
   )
 }

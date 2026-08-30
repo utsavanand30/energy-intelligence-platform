@@ -127,6 +127,9 @@ export interface RealtimeReading {
   voltage_r?: number
   voltage_y?: number
   voltage_b?: number
+  voltage_ry?: number
+  voltage_yb?: number
+  voltage_br?: number
   voltage_avg?: number
   current_r?: number
   current_y?: number
