@@ -12,6 +12,9 @@ export default function Login() {
   const [errorMessage, setErrorMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
+  // Clear stale token_exp on login page load to prevent redirect loop
+  useEffect(() => { localStorage.removeItem('token_exp') }, [])
+
   // Check for SSO error in URL
   const ssoError = new URLSearchParams(location.search).get('error')
   const sessionExpired = new URLSearchParams(location.search).get('reason') === 'session_expired'

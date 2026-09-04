@@ -8,8 +8,8 @@ const WARNING_BEFORE_MS = 5 * 60 * 1000
 export function useSessionTimeout() {
   const { user, logout } = useAuth()
   const [showWarning, setShowWarning] = useState(false)
-  const warningTimer  = useRef<ReturnType<typeof setTimeout>>()
-  const logoutTimer   = useRef<ReturnType<typeof setTimeout>>()
+  const warningTimer = useRef<ReturnType<typeof setTimeout>>()
+  const logoutTimer  = useRef<ReturnType<typeof setTimeout>>()
 
   const clearTimers = useCallback(() => {
     clearTimeout(warningTimer.current)
@@ -17,24 +17,39 @@ export function useSessionTimeout() {
   }, [])
 
   const scheduleTimers = useCallback(() => {
+    // Only run timer logic when the user is actually authenticated
+    if (!user) {
+      localStorage.removeItem('token_exp')
+      return
+    }
+
     const expStr = localStorage.getItem('token_exp')
     if (!expStr) return
+
     const exp = parseInt(expStr, 10) * 1000
     const now = Date.now()
     const msUntilExpiry = exp - now
-    if (msUntilExpiry <= 0) { logout(); return }
+
+    if (msUntilExpiry <= 0) {
+      localStorage.removeItem('token_exp')
+      logout()
+      return
+    }
+
     clearTimers()
+
     const msUntilWarning = msUntilExpiry - WARNING_BEFORE_MS
     if (msUntilWarning > 0) {
       warningTimer.current = setTimeout(() => setShowWarning(true), msUntilWarning)
     } else {
       setShowWarning(true)
     }
+
     logoutTimer.current = setTimeout(() => {
       logout()
       window.location.href = '/login?reason=session_expired'
     }, msUntilExpiry)
-  }, [clearTimers, logout])
+  }, [clearTimers, logout, user])
 
   const continueSession = useCallback(async () => {
     try {
@@ -47,7 +62,13 @@ export function useSessionTimeout() {
   }, [logout, scheduleTimers])
 
   useEffect(() => {
-    if (!user) return
+    // Clear any stale token_exp when not logged in (e.g. after manual logout or fresh visit)
+    if (!user) {
+      localStorage.removeItem('token_exp')
+      clearTimers()
+      return
+    }
+
     scheduleTimers()
     const handler = () => scheduleTimers()
     ACTIVITY_EVENTS.forEach(e => window.addEventListener(e, handler, { passive: true }))
