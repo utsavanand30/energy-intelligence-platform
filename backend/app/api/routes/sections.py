@@ -4,7 +4,9 @@ from typing import List, Optional
 from app.core.database import get_db
 from app.models.section import Section
 from app.models.shed import Shed
+from app.models.user import User
 from app.schemas.hierarchy import SectionOut, SectionCreate, SectionUpdate
+from app.auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/sections", tags=["Sections"])
 
@@ -13,7 +15,8 @@ router = APIRouter(prefix="/sections", tags=["Sections"])
 def list_sections(
     shed_id: Optional[int] = None,
     plant_id: Optional[int] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user)
 ):
     q = db.query(Section).filter(Section.active == True)
     if shed_id:
@@ -25,7 +28,7 @@ def list_sections(
 
 
 @router.get("/{section_id}", response_model=SectionOut)
-def get_section(section_id: int, db: Session = Depends(get_db)):
+def get_section(section_id: int, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     section = db.query(Section).filter(Section.id == section_id).first()
     if not section:
         raise HTTPException(status_code=404, detail="Section not found")
@@ -33,7 +36,7 @@ def get_section(section_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=SectionOut, status_code=201)
-def create_section(body: SectionCreate, db: Session = Depends(get_db)):
+def create_section(body: SectionCreate, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     section = Section(**body.model_dump())
     db.add(section)
     db.commit()
@@ -42,7 +45,7 @@ def create_section(body: SectionCreate, db: Session = Depends(get_db)):
 
 
 @router.patch("/{section_id}", response_model=SectionOut)
-def update_section(section_id: int, body: SectionUpdate, db: Session = Depends(get_db)):
+def update_section(section_id: int, body: SectionUpdate, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     section = db.query(Section).filter(Section.id == section_id).first()
     if not section:
         raise HTTPException(status_code=404, detail="Section not found")

@@ -4,12 +4,15 @@ import {
   Settings, FileText, AlertTriangle, TrendingUp,
   ChevronRight, ChevronDown, ChevronLeft,
   Building2, Factory, Layers, Cpu, GitBranch,
+  LogOut, Users, ScrollText,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useState } from 'react'
 import { useHierarchyStore } from '../../store/hierarchyStore'
 import { useHierarchy } from '../../hooks/useHierarchy'
 import { useNavigationStore } from '../../store/navigationStore'
+import { useAuth } from '../../auth/useAuth'
+import RoleGuard from '../../auth/RoleGuard'
 
 const NAV_ITEMS = [
   { label: 'Energy Overview', path: '/',              icon: LayoutDashboard, end: true },
@@ -175,6 +178,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ collapsed = false, onToggleCollapse, onClose }: SidebarProps) {
+  const { user, logout } = useAuth()
   return (
     <aside
       className={clsx(
@@ -227,6 +231,15 @@ export default function Sidebar({ collapsed = false, onToggleCollapse, onClose }
         {NAV_ITEMS.map(item => (
           <NavItem key={item.path} item={item} collapsed={collapsed} onClose={onClose} />
         ))}
+        <RoleGuard allowedRoles={['ADMIN']}>
+          {!collapsed && (
+            <div className="text-[9px] font-bold text-surface-600 uppercase tracking-widest px-3 mt-4 mb-1.5">
+              Admin
+            </div>
+          )}
+          <NavItem key="/admin/users" item={{ label: 'User Management', path: '/admin/users', icon: Users }} collapsed={collapsed} />
+          <NavItem key="/admin/audit-logs" item={{ label: 'Audit Logs', path: '/admin/audit-logs', icon: ScrollText }} collapsed={collapsed} />
+        </RoleGuard>
       </nav>
 
       {/* ── Plant Explorer (hidden when collapsed) ────────────── */}
@@ -245,35 +258,57 @@ export default function Sidebar({ collapsed = false, onToggleCollapse, onClose }
         collapsed ? 'flex items-center justify-center py-3' : 'px-4 py-2.5',
       )}>
         {collapsed ? (
-          /* Collapsed footer: just the expand button */
-          onToggleCollapse && (
-            <button
-              onClick={onToggleCollapse}
-              title="Expand sidebar"
-              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-800 text-surface-500 hover:text-surface-300 transition-colors"
-            >
-              <ChevronRight size={15} />
-            </button>
-          )
-        ) : (
-          /* Expanded footer: status + collapse button */
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5 min-w-0">
-              <div className="text-[9px] text-surface-600 font-medium">Simulation Active</div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-energy-green animate-pulse shrink-0" />
-                <span className="text-[9px] text-surface-500">Live data streaming</span>
+          /* Collapsed footer: avatar + expand button */
+          <div className="flex flex-col items-center gap-2">
+            {user?.profile_picture_url ? (
+              <img src={user.profile_picture_url} alt="" className="w-7 h-7 rounded-full object-cover" />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-brand-700 flex items-center justify-center text-[11px] font-bold text-white uppercase">
+                {(user?.full_name ?? user?.username ?? '?').charAt(0)}
               </div>
+            )}
+            {onToggleCollapse && (
+              <button
+                onClick={onToggleCollapse}
+                title="Expand sidebar"
+                className="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-800 text-surface-500 hover:text-surface-300 transition-colors"
+              >
+                <ChevronRight size={14} />
+              </button>
+            )}
+          </div>
+        ) : (
+          /* Expanded footer: user info + collapse + logout */
+          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+            {user?.profile_picture_url ? (
+              <img src={user.profile_picture_url} alt="" className="w-7 h-7 rounded-full shrink-0 object-cover" />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-brand-700 flex items-center justify-center shrink-0 text-[11px] font-bold text-white uppercase">
+                {(user?.full_name ?? user?.username ?? '?').charAt(0)}
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-medium text-surface-200 truncate">
+                {user?.full_name ?? user?.username ?? 'User'}
+              </div>
+              <div className="text-[9px] text-surface-500 truncate">{user?.role}</div>
             </div>
             {onToggleCollapse && (
               <button
                 onClick={onToggleCollapse}
                 title="Collapse sidebar"
-                className="ml-2 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-surface-800 text-surface-500 hover:text-surface-300 transition-colors shrink-0"
+                className="ml-1 w-6 h-6 flex items-center justify-center rounded hover:bg-surface-800 text-surface-500 hover:text-surface-300 transition-colors shrink-0"
               >
-                <ChevronLeft size={14} />
+                <ChevronLeft size={13} />
               </button>
             )}
+            <button
+              onClick={() => logout()}
+              title="Log out"
+              className="w-6 h-6 flex items-center justify-center rounded hover:bg-surface-800 text-surface-500 hover:text-red-400 transition-colors shrink-0"
+            >
+              <LogOut size={13} />
+            </button>
           </div>
         )}
       </div>

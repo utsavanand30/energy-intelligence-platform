@@ -14,6 +14,8 @@ from app.models.meter import EnergyMeter
 from app.models.machine import Machine
 from app.models.section import Section
 from app.models.shed import Shed
+from app.models.user import User
+from app.auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
@@ -39,7 +41,8 @@ def daily_report(
     section_id: Optional[int] = None,
     from_date: date = Query(default=None),
     to_date: date = Query(default=None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user)
 ):
     now = datetime.now(timezone.utc)
     if not to_date:

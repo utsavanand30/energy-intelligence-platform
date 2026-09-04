@@ -1,0 +1,570 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Install new Python backend dependencies": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354183
+      },
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495360997
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495827573
+      }
+    ],
+    "1.2 Extend `backend/app/core/config.py` with auth environment variables": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354241
+      },
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495361695
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495828177
+      }
+    ],
+    "1.3 Update `backend/.env.example` with all new auth env vars": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354268
+      },
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495362310
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495828911
+      }
+    ],
+    "2.1 Extend `backend/app/models/user.py` with new auth columns": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354298
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495841638
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788496044895
+      }
+    ],
+    "2.2 Create `backend/app/models/session.py`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354330
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788496055601
+      }
+    ],
+    "2.3 Create `backend/app/models/password_reset_token.py`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354390
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788496061447
+      }
+    ],
+    "2.4 Create `backend/app/models/email_verification.py`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354414
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788496066064
+      }
+    ],
+    "2.5 Create `backend/app/models/auth_audit_log.py`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354470
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788496071881
+      }
+    ],
+    "2.6 Update `backend/app/models/__init__.py` to export new models": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354499
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788496076511
+      }
+    ],
+    "2.7 Create Alembic migration `backend/alembic/versions/<timestamp>_add_auth_tables.py`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354523
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788496439018
+      }
+    ],
+    "3.1 Create `backend/app/auth/__init__.py`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354550
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788496444352
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788500410076
+      }
+    ],
+    "3.2 Create `backend/app/auth/password.py`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354577
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788500414764
+      }
+    ],
+    "3.3 Create `backend/app/auth/jwt_handler.py`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354606
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788500419406
+      }
+    ],
+    "3.4 Create `backend/app/auth/email_service.py`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354631
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788500423841
+      }
+    ],
+    "3.5 Create `backend/app/auth/oauth_client.py`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354657
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788500429184
+      }
+    ],
+    "3.6 Create `backend/app/auth/dependencies.py`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354684
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788500433831
+      }
+    ],
+    "3.7 Create `backend/app/schemas/auth.py`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354722
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788500438263
+      }
+    ],
+    "4.1 Create `backend/app/auth/router.py` — auth endpoints": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354746
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788500443225
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788502635905
+      }
+    ],
+    "4.2 Add `GET /api/auth/health` endpoint to auth router": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354771
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788502640538
+      }
+    ],
+    "5.1 Create `backend/app/admin/__init__.py`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354801
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788500443897
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788502645396
+      }
+    ],
+    "5.2 Create `backend/app/admin/router.py` — admin endpoints": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354831
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788502649983
+      }
+    ],
+    "6.1 Add `get_current_user` dependency to all existing API route files": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354855
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788502655367
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788504010181
+      }
+    ],
+    "6.2 Add cookie-based auth to `backend/app/api/websocket.py`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354879
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788502656174
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788504011018
+      }
+    ],
+    "6.3 Register auth + admin routers and add middleware in `backend/app/main.py`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354906
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788502657140
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788504011831
+      }
+    ],
+    "7.1 Install new npm frontend dependencies": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354933
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788504027850
+      },
+      {
+        "executionId": "6c1a5011-405d-494f-8150-73f9625c3693",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788505051354
+      }
+    ],
+    "7.2 Update `frontend/src/api/client.ts` with auth support": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354960
+      }
+    ],
+    "7.3 Create `frontend/src/api/auth.ts`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495354986
+      }
+    ],
+    "7.4 Create `frontend/src/auth/AuthContext.tsx`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355009
+      }
+    ],
+    "7.5 Create `frontend/src/auth/useAuth.ts`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355038
+      }
+    ],
+    "7.6 Create `frontend/src/auth/ProtectedRoute.tsx`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355078
+      }
+    ],
+    "7.7 Create `frontend/src/auth/RoleGuard.tsx`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355100
+      }
+    ],
+    "7.8 Update `frontend/src/App.tsx` with new router structure": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355163
+      }
+    ],
+    "8.1 Create `frontend/src/components/auth/LoginForm.tsx`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355191
+      }
+    ],
+    "8.2 Create `frontend/src/components/auth/SSOButtons.tsx`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355215
+      }
+    ],
+    "8.3 Create `frontend/src/pages/Login.tsx`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355247
+      }
+    ],
+    "8.4 Create `frontend/src/components/auth/PasswordStrength.tsx`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355279
+      }
+    ],
+    "8.5 Create `frontend/src/pages/Register.tsx`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355311
+      }
+    ],
+    "8.6 Create `frontend/src/pages/ForgotPassword.tsx`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355343
+      }
+    ],
+    "8.7 Create `frontend/src/pages/ResetPassword.tsx`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355372
+      }
+    ],
+    "8.8 Create `frontend/src/pages/ChangePassword.tsx`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355398
+      }
+    ],
+    "8.9 Create `frontend/src/pages/VerifyEmail.tsx`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355436
+      }
+    ],
+    "8.10 Create `frontend/src/pages/Unauthorized.tsx`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355459
+      }
+    ],
+    "9.1 Create `frontend/src/hooks/useSessionTimeout.ts`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355484
+      }
+    ],
+    "9.2 Update `frontend/src/auth/AuthContext.tsx` to store token expiry": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355509
+      }
+    ],
+    "9.3 Create `frontend/src/components/auth/SessionWarning.tsx`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355536
+      }
+    ],
+    "9.4 Integrate session timeout into `frontend/src/components/layout/Layout.tsx`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355564
+      }
+    ],
+    "9.5 Update `frontend/src/components/layout/Sidebar.tsx` footer with user menu": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355589
+      }
+    ],
+    "10.1 Create `frontend/src/pages/admin/AdminUsers.tsx`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355613
+      }
+    ],
+    "10.2 Create `frontend/src/pages/admin/AdminAuditLogs.tsx`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355635
+      }
+    ],
+    "10.3 Add admin navigation links to `frontend/src/components/layout/Sidebar.tsx`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355660
+      }
+    ],
+    "11.1 Write backend unit tests for `password.py`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355686
+      }
+    ],
+    "11.2 Write backend unit tests for `jwt_handler.py`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355713
+      }
+    ],
+    "11.3 Write backend integration tests for login and registration flows": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355738
+      }
+    ],
+    "11.4 Write frontend unit tests for `AuthContext` and `ProtectedRoute`": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355779
+      }
+    ],
+    "12.1 Final integration verification": [
+      {
+        "executionId": "9fa572ed-b760-4996-86ee-870b2c1f3636",
+        "chatSessionId": "sess_a486b936-fc4c-4eba-aa28-03b4027ddb21",
+        "timestamp": 1788495355833
+      }
+    ]
+  }
+}

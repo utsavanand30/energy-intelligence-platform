@@ -29,6 +29,29 @@ class Settings(BaseSettings):
     SIMULATION_MODE: str = "realtime"
     SIMULATION_SPEED: int = 1
 
+    # ── Auth / JWT ───────────────────────────────────────────────────────────
+    JWT_SECRET_KEY: str = "dev-secret-key-change-in-production"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_HOURS: int = 8
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+    # ── SMTP ─────────────────────────────────────────────────────────────────
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_NAME: str = "EnergyIQ Platform"
+
+    # ── Microsoft Azure AD SSO ───────────────────────────────────────────────
+    AZURE_CLIENT_ID: str = ""
+    AZURE_CLIENT_SECRET: str = ""
+    AZURE_TENANT_ID: str = ""
+
+    # ── Google SSO ───────────────────────────────────────────────────────────
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_WORKSPACE_DOMAIN: str = ""
+
     # ── App ─────────────────────────────────────────────────────────────────
     APP_TITLE: str = "Energy Intelligence Platform"
     APP_VERSION: str = "1.0.0"
@@ -38,6 +61,9 @@ class Settings(BaseSettings):
 
     # Set to "true" in the Docker container so FastAPI serves the React build
     SERVE_FRONTEND: str = "false"
+
+    # Frontend base URL — used to build links in emails and OAuth redirects
+    FRONTEND_URL: str = "http://localhost:5173"
 
     @property
     def cors_origins_list(self) -> List[str]:

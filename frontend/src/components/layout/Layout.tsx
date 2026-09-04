@@ -3,9 +3,12 @@ import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import MobileNav from './MobileNav'
 import { useWebSocket } from '../../hooks/useWebSocket'
+import { useSessionTimeout } from '../../hooks/useSessionTimeout'
+import SessionWarning from '../auth/SessionWarning'
 
 export default function Layout() {
   useWebSocket()
+  const { showWarning, continueSession, logout: sessionLogout } = useSessionTimeout()
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   // Desktop collapse state — persisted in local storage so it survives refresh
   const [collapsed, setCollapsed] = useState(() => {
@@ -22,6 +25,9 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen bg-surface-950 overflow-hidden">
+      {showWarning && (
+        <SessionWarning onContinue={continueSession} onLogout={sessionLogout} />
+      )}
       {/* ── Desktop sidebar ─────────────────────────────────── */}
       <div className="hidden lg:flex shrink-0 transition-all duration-200"
         style={{ width: collapsed ? 52 : 224 }}>

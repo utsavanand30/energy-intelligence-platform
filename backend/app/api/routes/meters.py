@@ -8,8 +8,10 @@ from app.models.machine import Machine
 from app.models.section import Section
 from app.models.shed import Shed
 from app.models.reading import MeterReading
+from app.models.user import User
 from app.schemas.meter import MeterOut, MeterCreate, MeterUpdate, MeterHealthOut
 from app.schemas.reading import MeterReadingOut
+from app.auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/meters", tags=["Meters"])
 
@@ -58,7 +60,8 @@ def list_meters(
     section_id: Optional[int] = None,
     machine_id: Optional[int] = None,
     enabled_only: bool = False,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user)
 ):
     q = _meter_q(db)
     if plant_id:
@@ -77,7 +80,8 @@ def list_meters(
 @router.get("/health", response_model=List[MeterHealthOut])
 def meter_health(
     plant_id: Optional[int] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user)
 ):
     q = _meter_q(db)
     if plant_id:
@@ -106,7 +110,7 @@ def meter_health(
 
 
 @router.get("/{meter_id}", response_model=MeterOut)
-def get_meter(meter_id: int, db: Session = Depends(get_db)):
+def get_meter(meter_id: int, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     m = _meter_q(db).filter(EnergyMeter.id == meter_id).first()
     if not m:
         raise HTTPException(status_code=404, detail="Meter not found")
@@ -114,7 +118,7 @@ def get_meter(meter_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/{meter_id}/latest", response_model=Optional[MeterReadingOut])
-def get_latest_reading(meter_id: int, db: Session = Depends(get_db)):
+def get_latest_reading(meter_id: int, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     reading = (
         db.query(MeterReading)
         .filter(MeterReading.meter_id == meter_id)
@@ -130,7 +134,8 @@ def get_meter_history(
     from_dt: Optional[datetime] = None,
     to_dt: Optional[datetime] = None,
     limit: int = 2880,      # default: 1 day of 30s data
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user)
 ):
     q = db.query(MeterReading).filter(MeterReading.meter_id == meter_id)
     if from_dt:
@@ -141,7 +146,7 @@ def get_meter_history(
 
 
 @router.post("", response_model=MeterOut, status_code=201)
-def create_meter(body: MeterCreate, db: Session = Depends(get_db)):
+def create_meter(body: MeterCreate, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     meter = EnergyMeter(**body.model_dump())
     db.add(meter)
     db.commit()
@@ -150,7 +155,7 @@ def create_meter(body: MeterCreate, db: Session = Depends(get_db)):
 
 
 @router.patch("/{meter_id}", response_model=MeterOut)
-def update_meter(meter_id: int, body: MeterUpdate, db: Session = Depends(get_db)):
+def update_meter(meter_id: int, body: MeterUpdate, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     meter = db.query(EnergyMeter).filter(EnergyMeter.id == meter_id).first()
     if not meter:
         raise HTTPException(status_code=404, detail="Meter not found")

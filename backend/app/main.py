@@ -15,7 +15,7 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -32,6 +32,14 @@ from app.api.routes import (
     energy, alerts, metrics, reports,
 )
 from app.api.websocket import router as ws_router
+
+# Auth/Admin routes
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from fastapi.responses import JSONResponse
+from app.auth.router import router as auth_router
+from app.admin.router import router as admin_router
 
 # Background service
 from app.services.energy_service import polling_loop
@@ -77,6 +85,22 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    detail = exc.detail
+    if isinstance(detail, dict):
+        return JSONResponse(status_code=exc.status_code, content=detail)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": "ERROR", "message": str(detail), "details": None},
+    )
+
+
 # CORS — in production the frontend is served from the same origin so this
 # only matters for external API consumers and local dev.
 app.add_middleware(
@@ -98,6 +122,8 @@ app.include_router(energy.router,   prefix=prefix)
 app.include_router(alerts.router,   prefix=prefix)
 app.include_router(metrics.router,  prefix=prefix)
 app.include_router(reports.router,  prefix=prefix)
+app.include_router(auth_router,     prefix=prefix)
+app.include_router(admin_router,    prefix=prefix)
 
 # WebSocket
 app.include_router(ws_router)

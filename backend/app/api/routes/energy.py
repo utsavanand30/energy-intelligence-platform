@@ -15,10 +15,12 @@ from app.models.machine import Machine
 from app.models.section import Section
 from app.models.shed import Shed
 from app.models.plant import Plant
+from app.models.user import User
 from app.schemas.energy import (
     EnergyKPIOut, EnergyTrendOut, TrendPoint,
     SectionConsumptionOut, MachineConsumptionOut
 )
+from app.auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/energy", tags=["Energy"])
 
@@ -106,7 +108,8 @@ def energy_overview(
     plant_id: int,
     shed_id: Optional[int] = None,
     section_id: Optional[int] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user)
 ):
     plant = db.query(Plant).filter(Plant.id == plant_id).first()
     if not plant:
@@ -235,7 +238,8 @@ def energy_trend(
     granularity: str = Query("hourly", pattern="^(hourly|daily|weekly|monthly)$"),
     from_dt: Optional[datetime] = None,
     to_dt: Optional[datetime] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user)
 ):
     meter_ids = _get_meter_ids(db, plant_id, shed_id, section_id)
     if not meter_ids:
@@ -290,7 +294,8 @@ def energy_trend(
 def section_breakdown(
     plant_id: int,
     shed_id: Optional[int] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user)
 ):
     today_start, today_end = _today_range()
     cutoff = datetime.now(timezone.utc) - timedelta(minutes=5)
@@ -351,7 +356,8 @@ def machine_breakdown(
     shed_id: Optional[int] = None,
     section_id: Optional[int] = None,
     top_n: Optional[int] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user)
 ):
     today_start, today_end = _today_range()
     cutoff = datetime.now(timezone.utc) - timedelta(minutes=5)

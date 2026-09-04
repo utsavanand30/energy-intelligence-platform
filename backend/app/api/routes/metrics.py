@@ -10,7 +10,9 @@ from datetime import datetime, timezone, timedelta
 from app.core.database import get_db
 from app.models.reading import MeterReading
 from app.models.meter import EnergyMeter
+from app.models.user import User
 from app.schemas.reading import MeterReadingOut
+from app.auth.dependencies import get_current_user
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/metrics", tags=["Metrics"])
@@ -32,7 +34,8 @@ def metrics_summary(
     machine_id: Optional[int] = None,
     from_dt: Optional[datetime] = None,
     to_dt: Optional[datetime] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user)
 ):
     now = datetime.now(timezone.utc)
     if not from_dt:
@@ -105,7 +108,8 @@ def get_readings(
     to_dt: Optional[datetime] = None,
     granularity: str = Query("raw", pattern="^(raw|1min|5min|15min|30min|hourly)$"),
     limit: int = 1440,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user)
 ):
     now = datetime.now(timezone.utc)
     if not from_dt:

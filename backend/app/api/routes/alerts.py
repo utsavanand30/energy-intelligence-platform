@@ -6,7 +6,9 @@ from app.core.database import get_db
 from app.models.alert import Alert, AlertStatus, AlertSeverity
 from app.models.machine import Machine
 from app.models.meter import EnergyMeter
+from app.models.user import User
 from app.schemas.energy import AlertOut
+from app.auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/alerts", tags=["Alerts"])
 
@@ -17,7 +19,8 @@ def list_alerts(
     severity: Optional[str] = None,
     status: Optional[str] = Query(None, pattern="^(ACTIVE|ACKNOWLEDGED|RESOLVED)$"),
     limit: int = 50,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user)
 ):
     q = db.query(Alert)
     if status:
@@ -57,7 +60,7 @@ def list_alerts(
 
 
 @router.patch("/{alert_id}/acknowledge")
-def acknowledge_alert(alert_id: int, db: Session = Depends(get_db)):
+def acknowledge_alert(alert_id: int, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     alert = db.query(Alert).filter(Alert.id == alert_id).first()
     if not alert:
         from fastapi import HTTPException
@@ -69,7 +72,7 @@ def acknowledge_alert(alert_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/{alert_id}/resolve")
-def resolve_alert(alert_id: int, db: Session = Depends(get_db)):
+def resolve_alert(alert_id: int, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     alert = db.query(Alert).filter(Alert.id == alert_id).first()
     if not alert:
         from fastapi import HTTPException

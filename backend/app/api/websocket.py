@@ -31,15 +31,35 @@ A client can also send { "type": "ping" } and receive { "type": "pong" }.
 import uuid
 import json
 import logging
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
+from sqlalchemy.orm import Session
+from app.core.database import get_db
 from app.services.energy_service import register_ws, unregister_ws
+from app.auth.jwt_handler import decode_access_token
+from app.models.session import Session as AuthSession
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
 @router.websocket("/ws/realtime")
-async def websocket_realtime(websocket: WebSocket):
+async def websocket_realtime(websocket: WebSocket, db: Session = Depends(get_db)):
+    # Validate cookie-based auth token before accepting the connection
+    token = websocket.cookies.get("access_token")
+    if not token:
+        await websocket.close(code=4001)
+        return
+    try:
+        payload = decode_access_token(token)
+        jti = payload.get("jti")
+        session = db.query(AuthSession).filter(AuthSession.token_jti == jti).first()
+        if not session or not session.is_active:
+            await websocket.close(code=4001)
+            return
+    except Exception:
+        await websocket.close(code=4001)
+        return
+
     await websocket.accept()
     client_id = str(uuid.uuid4())
     register_ws(client_id, websocket)

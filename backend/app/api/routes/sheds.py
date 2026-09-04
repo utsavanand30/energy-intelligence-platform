@@ -3,13 +3,15 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.core.database import get_db
 from app.models.shed import Shed
+from app.models.user import User
 from app.schemas.hierarchy import ShedOut, ShedCreate, ShedUpdate
+from app.auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/sheds", tags=["Sheds"])
 
 
 @router.get("", response_model=List[ShedOut])
-def list_sheds(plant_id: Optional[int] = None, db: Session = Depends(get_db)):
+def list_sheds(plant_id: Optional[int] = None, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     q = db.query(Shed).filter(Shed.active == True)
     if plant_id:
         q = q.filter(Shed.plant_id == plant_id)
@@ -17,7 +19,7 @@ def list_sheds(plant_id: Optional[int] = None, db: Session = Depends(get_db)):
 
 
 @router.get("/{shed_id}", response_model=ShedOut)
-def get_shed(shed_id: int, db: Session = Depends(get_db)):
+def get_shed(shed_id: int, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     shed = db.query(Shed).filter(Shed.id == shed_id).first()
     if not shed:
         raise HTTPException(status_code=404, detail="Shed not found")
@@ -25,7 +27,7 @@ def get_shed(shed_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=ShedOut, status_code=201)
-def create_shed(body: ShedCreate, db: Session = Depends(get_db)):
+def create_shed(body: ShedCreate, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     shed = Shed(**body.model_dump())
     db.add(shed)
     db.commit()
@@ -34,7 +36,7 @@ def create_shed(body: ShedCreate, db: Session = Depends(get_db)):
 
 
 @router.patch("/{shed_id}", response_model=ShedOut)
-def update_shed(shed_id: int, body: ShedUpdate, db: Session = Depends(get_db)):
+def update_shed(shed_id: int, body: ShedUpdate, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     shed = db.query(Shed).filter(Shed.id == shed_id).first()
     if not shed:
         raise HTTPException(status_code=404, detail="Shed not found")

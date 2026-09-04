@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum as SAEnum
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
 from app.core.database import Base
@@ -28,6 +29,16 @@ class User(Base):
     active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     last_login = Column(DateTime(timezone=True), nullable=True)
+
+    # New auth columns
+    must_reset_password = Column(Boolean, default=False, nullable=False)
+    email_verified = Column(Boolean, default=False, nullable=False)
+    sso_provider = Column(String(50), nullable=True)
+    profile_picture_url = Column(String(500), nullable=True)
+    failed_login_attempts = Column(Integer, default=0, nullable=False)
+    locked_until = Column(DateTime(timezone=True), nullable=True)
+
+    sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User id={self.id} username={self.username!r} role={self.role}>"

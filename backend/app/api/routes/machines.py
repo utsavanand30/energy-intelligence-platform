@@ -5,7 +5,9 @@ from app.core.database import get_db
 from app.models.machine import Machine
 from app.models.section import Section
 from app.models.shed import Shed
+from app.models.user import User
 from app.schemas.hierarchy import MachineOut, MachineCreate, MachineUpdate
+from app.auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/machines", tags=["Machines"])
 
@@ -26,7 +28,8 @@ def list_machines(
     section_id: Optional[int] = None,
     shed_id: Optional[int] = None,
     plant_id: Optional[int] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user)
 ):
     q = (
         db.query(Machine)
@@ -50,7 +53,7 @@ def list_machines(
 
 
 @router.get("/{machine_id}", response_model=MachineOut)
-def get_machine(machine_id: int, db: Session = Depends(get_db)):
+def get_machine(machine_id: int, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     m = (
         db.query(Machine)
         .options(
@@ -67,7 +70,7 @@ def get_machine(machine_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=MachineOut, status_code=201)
-def create_machine(body: MachineCreate, db: Session = Depends(get_db)):
+def create_machine(body: MachineCreate, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     machine = Machine(**body.model_dump())
     db.add(machine)
     db.commit()
@@ -76,7 +79,7 @@ def create_machine(body: MachineCreate, db: Session = Depends(get_db)):
 
 
 @router.patch("/{machine_id}", response_model=MachineOut)
-def update_machine(machine_id: int, body: MachineUpdate, db: Session = Depends(get_db)):
+def update_machine(machine_id: int, body: MachineUpdate, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     machine = db.query(Machine).filter(Machine.id == machine_id).first()
     if not machine:
         raise HTTPException(status_code=404, detail="Machine not found")
