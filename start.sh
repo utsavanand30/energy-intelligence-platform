@@ -6,6 +6,11 @@ set -e
 PORT="${PORT:-8000}"
 echo "=== Energy Intelligence Platform | PORT=$PORT ==="
 
+# ── 0. Run DB migrations (idempotent — safe to run on every boot) ────────
+echo "Running database migrations..."
+alembic upgrade head
+echo "Migrations complete ✓"
+
 # ── 1. Start uvicorn immediately in background ───────────────────────────
 uvicorn app.main:app --host 0.0.0.0 --port "$PORT" --workers 1 --no-access-log &
 UVICORN_PID=$!
