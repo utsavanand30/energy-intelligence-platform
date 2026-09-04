@@ -18,11 +18,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // On mount: check if a valid session exists
   useEffect(() => {
-    authApi.me()
-      .then((u) => {
-        setUser(u)
-        // Store token expiry for session timeout hook
-        // Backend returns expires_at; alternatively derive from login response
+    // Use a direct fetch to avoid the 401 interceptor redirect loop on page load
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then(async (res) => {
+        if (res.ok) {
+          const u = await res.json()
+          setUser(u)
+        } else {
+          setUser(null)
+        }
       })
       .catch(() => setUser(null))
       .finally(() => setIsLoading(false))

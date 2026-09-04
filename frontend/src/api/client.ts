@@ -25,11 +25,14 @@ api.interceptors.response.use(
   async (error) => {
     const original = error.config
     // Only retry once, only on 401, skip auth endpoints to prevent loops
+    const onLoginPage = window.location.pathname === '/login'
     if (
       error.response?.status === 401 &&
       !original._retry &&
+      !onLoginPage &&
       !original.url?.includes('/auth/login') &&
-      !original.url?.includes('/auth/refresh')
+      !original.url?.includes('/auth/refresh') &&
+      !original.url?.includes('/auth/me')
     ) {
       if (isRefreshing) {
         return new Promise<void>((resolve) => {
@@ -46,8 +49,11 @@ api.interceptors.response.use(
         pendingRequests = []
         return api(original)
       } catch {
-        // Refresh failed — redirect to login
-        window.location.href = '/login?reason=session_expired'
+        // Refresh failed — redirect to login only if not already there
+        const isOnLoginPage = window.location.pathname === '/login'
+        if (!isOnLoginPage) {
+          window.location.href = '/login?reason=session_expired'
+        }
       } finally {
         isRefreshing = false
       }
