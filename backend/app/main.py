@@ -42,7 +42,7 @@ from app.auth.router import router as auth_router
 from app.admin.router import router as admin_router
 
 # Background service
-from app.services.energy_service import polling_loop
+from app.services.energy_service import polling_loop, cleanup_loop
 
 logging.basicConfig(
     level=logging.INFO,
@@ -64,12 +64,19 @@ async def lifespan(app: FastAPI):
 
     task = asyncio.create_task(polling_loop())
     logger.info("Simulation polling loop started.")
+    cleanup_task = asyncio.create_task(cleanup_loop())
+    logger.info("Data retention cleanup loop started.")
 
     yield
 
     task.cancel()
+    cleanup_task.cancel()
     try:
         await task
+    except asyncio.CancelledError:
+        pass
+    try:
+        await cleanup_task
     except asyncio.CancelledError:
         pass
     logger.info("Shutdown complete.")

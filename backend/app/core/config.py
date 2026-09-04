@@ -57,7 +57,8 @@ class Settings(BaseSettings):
     APP_VERSION: str = "1.0.0"
     API_PREFIX: str = "/api"
 
-    SCAN_INTERVAL_SECONDS: int = 30
+    SCAN_INTERVAL_SECONDS: int = 300     # 5 minutes default (was 30s — reduces DB writes 10x)
+    DATA_RETENTION_DAYS: int = 30        # delete readings older than this many days
 
     # Set to "true" in the Docker container so FastAPI serves the React build
     SERVE_FRONTEND: str = "false"

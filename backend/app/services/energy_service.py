@@ -1,16 +1,18 @@
 """
 Background service that:
-1. Polls the SimulatorDataProvider every 30 seconds.
+1. Polls the SimulatorDataProvider every SCAN_INTERVAL_SECONDS (default 5 min).
 2. Persists new readings to the database.
 3. Updates meter communication_status and last_seen.
 4. Broadcasts the latest readings to all connected WebSocket clients.
+5. Runs a nightly cleanup job to keep meter_readings within DATA_RETENTION_DAYS.
 """
 import asyncio
 import logging
-from datetime import datetime, timezone
-from typing import Dict, Set, Any
+from datetime import datetime, timezone, timedelta
+from typing import Dict, Any
 import json
 
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app.models.meter import EnergyMeter, MeterStatus
@@ -22,7 +24,6 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 # ── WebSocket connection registry ─────────────────────────────────────
-# Maps client_id → WebSocket object
 _connections: Dict[str, Any] = {}
 
 
@@ -45,6 +46,64 @@ async def _broadcast(payload: dict) -> None:
             dead.append(cid)
     for cid in dead:
         _connections.pop(cid, None)
+
+
+# ── Data retention cleanup ────────────────────────────────────────────
+
+def _cleanup_old_readings(db: Session, retention_days: int) -> int:
+    """Delete meter_readings older than retention_days. Returns rows deleted."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
+    result = db.execute(
+        text("DELETE FROM meter_readings WHERE timestamp < :cutoff"),
+        {"cutoff": cutoff},
+    )
+    db.commit()
+    deleted = result.rowcount
+    if deleted:
+        # VACUUM cannot run inside a transaction; use raw connection
+        with db.bind.connect() as conn:
+            conn.execution_options(isolation_level="AUTOCOMMIT")
+            conn.execute(text("VACUUM meter_readings"))
+    return deleted
+
+
+async def cleanup_loop() -> None:
+    """Runs a cleanup once at startup (to recover from disk full) then every 24 hours."""
+    retention = settings.DATA_RETENTION_DAYS
+    logger.info(f"Cleanup loop started — retention={retention} days")
+
+    # Run immediately at startup to recover disk space
+    await asyncio.sleep(10)   # let uvicorn finish starting first
+    try:
+        db = SessionLocal()
+        try:
+            deleted = _cleanup_old_readings(db, retention)
+            logger.info(f"Startup cleanup: deleted {deleted:,} old readings (>{retention} days)")
+        finally:
+            db.close()
+    except Exception as exc:
+        logger.warning(f"Startup cleanup failed (non-fatal): {exc}")
+
+    # Then run every 24 hours at ~2am
+    while True:
+        now = datetime.now(timezone.utc)
+        # Calculate seconds until next 2am UTC
+        next_run = now.replace(hour=2, minute=0, second=0, microsecond=0)
+        if next_run <= now:
+            next_run += timedelta(days=1)
+        wait_secs = (next_run - now).total_seconds()
+        logger.info(f"Next cleanup in {wait_secs/3600:.1f} hours")
+        await asyncio.sleep(wait_secs)
+
+        try:
+            db = SessionLocal()
+            try:
+                deleted = _cleanup_old_readings(db, retention)
+                logger.info(f"Nightly cleanup: deleted {deleted:,} old readings (>{retention} days)")
+            finally:
+                db.close()
+        except Exception as exc:
+            logger.error(f"Nightly cleanup error: {exc}", exc_info=True)
 
 
 # ── Polling loop ──────────────────────────────────────────────────────
