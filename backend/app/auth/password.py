@@ -3,11 +3,9 @@ import secrets
 import string
 from pathlib import Path
 
-from passlib.context import CryptContext
+import bcrypt as _bcrypt
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
-
-# Load common passwords list (top-10k) for complexity check
+# Load common passwords list
 _COMMON_PASSWORDS: set[str] = set()
 _COMMON_PASS_FILE = Path(__file__).parent / "common_passwords.txt"
 if _COMMON_PASS_FILE.exists():
@@ -17,16 +15,20 @@ if _COMMON_PASS_FILE.exists():
         if line.strip()
     }
 
+BCRYPT_ROUNDS = 12
+
 
 def hash_password(plain: str) -> str:
-    return pwd_context.hash(plain)
+    """Hash a password using raw bcrypt (bypasses passlib compatibility issues)."""
+    return _bcrypt.hashpw(plain.encode("utf-8"), _bcrypt.gensalt(BCRYPT_ROUNDS)).decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    if hashed == "!":
+    """Verify a password against a bcrypt hash."""
+    if not hashed or hashed == "!":
         return False
     try:
-        return pwd_context.verify(plain, hashed)
+        return _bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
     except Exception:
         return False
 
